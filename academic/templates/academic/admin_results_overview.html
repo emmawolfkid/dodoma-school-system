@@ -1,0 +1,244 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div class="container">
+
+    <h2>📊 Academic Admin - Results Overview</h2>
+    <p>Monitor all exam results and marks upload status</p>
+
+    <!-- FILTER -->
+    <div class="card filter-card">
+        <form method="GET">
+            <div class="grid-3">
+
+                <div>
+                    <label>Select Exam:</label>
+                    <select name="exam_id" class="form-control" required>
+                        <option value="">-- Select Exam --</option>
+
+                        {% for exam in exams %}
+                        <option value="{{ exam.id }}"
+                            {% if selected_exam and selected_exam.id == exam.id %}selected{% endif %}>
+                            
+                            {{ exam.name }} 
+                            ({{ exam.academic_year.year }}) 
+
+                            {% if exam.is_published %}
+                                ✅ Published
+                            {% elif exam.is_locked %}
+                                🔒 Locked
+                            {% else %}
+                                📝 Open
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label>Select Class:</label>
+                    <select name="student_class" class="form-control" required>
+                        <option value="">-- Select Class --</option>
+
+                        {% for class in classes %}
+                        <option value="{{ class }}"
+                            {% if selected_class == class %}selected{% endif %}>
+                            {{ class }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="align-end">
+                    <button type="submit" class="btn btn-primary">
+                        🔍 View Results
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+
+    {% if results_data %}
+    <div class="card">
+
+        <!-- HEADER -->
+        <div class="header-green">
+            <h3>{{ selected_exam.name }} - {{ selected_class }}</h3>
+
+            <p>
+                Total Students: {{ results_data.total_students }} |
+                Status:
+
+                {% if selected_exam.is_published %}
+                    <span class="badge success">✅ Published</span>
+
+                {% elif selected_exam.is_locked %}
+                    <span class="badge warning">🔒 Locked</span>
+
+                {% else %}
+                    <span class="badge warning">📝 In Progress</span>
+                {% endif %}
+            </p>
+        </div>
+
+
+        <!-- GLOBAL WARNING -->
+        {% if not results_data.all_uploaded %}
+        <div class="alert danger">
+            ❌ Some subjects are NOT fully uploaded. Cannot publish results.
+        </div>
+        {% endif %}
+
+
+        <!-- SUBJECT STATUS -->
+        <div class="section-box">
+            <h4>📚 Subject Marks Status</h4>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Uploaded</th>
+                        <th>Total</th>
+                        <th>Remaining</th>
+                        <th>Progress</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for s in subjects_status %}
+                <tr>
+                    <td>{{ s.subject.name }}</td>
+                    <td>{{ s.uploaded }}</td>
+                    <td>{{ s.total }}</td>
+                    <td>{{ s.remaining }}</td>
+
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" data-width="{{ s.percentage }}"></div>
+                        </div>
+                        <small>{{ s.percentage }}%</small>
+                    </td>
+
+                    <td>
+                        {% if not s.has_any_marks %}
+                            <span class="text-danger">🔴 Not Started</span>
+
+                        {% elif not s.is_uploaded %}
+                            <span class="text-warning">🟡 In Progress</span>
+
+                        {% else %}
+                            <span class="text-success">✅ Completed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">
+                        No subjects found
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- RESULTS TABLE -->
+        <table class="table results-table">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Student Name</th>
+                    <th>Reg No</th>
+                    <th>Total Points</th>
+                    <th>Division</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for result in results_data.results %}
+                <tr>
+                    <td class="text-center bold">{{ result.position }}</td>
+                    <td>{{ result.student.first_name }} {{ result.student.last_name }}</td>
+                    <td>{{ result.student.registration_number }}</td>
+                    <td class="text-center">{{ result.total_points }}</td>
+                    <td class="text-center bold">{{ result.division }}</td>
+
+                    <td class="text-center">
+                        <a href="{% url 'student_result_detail' selected_exam.id result.student.id %}">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">
+                        No results generated yet
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+
+        <!-- ACTION BUTTONS -->
+        <div class="flex-row">
+
+            {% if not selected_exam.is_published %}
+
+                <form method="POST" action="{% url 'generate_results' selected_exam.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">
+                        🎯 Generate / Refresh Results
+                    </button>
+                </form>
+
+                {% if selected_exam.is_locked and results_data.all_uploaded %}
+                <form method="POST" action="{% url 'publish_results' selected_exam.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        📢 Publish Results
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert danger">
+                    ⚠️ Cannot publish until ALL subjects are completed
+                </div>
+                {% endif %}
+
+            {% else %}
+                <div class="alert success">
+                    ✅ Results are published and visible
+                </div>
+            {% endif %}
+
+            <a href="{% url 'download_class_pdf' selected_exam.id selected_class %}"
+               class="btn btn-danger">
+                📄 Download PDF
+            </a>
+
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+
+<!-- SAFE JS -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.progress-fill').forEach(function(el) {
+        const width = el.getAttribute('data-width') || 0;
+        el.style.width = width + '%';
+    });
+});
+</script>
+
+{% endblock %}

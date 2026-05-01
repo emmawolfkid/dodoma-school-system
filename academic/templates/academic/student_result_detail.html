@@ -1,0 +1,92 @@
+{% extends "academic/base.html" %}
+{% load static %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: auto; padding: 20px;">
+
+    <!-- HEADER -->
+    <div style="text-align:center; margin-bottom:20px;">
+        <img src="{% static 'images/school_logo.png' %}" style="height:80px;">
+        <h2>DODOMA SECONDARY SCHOOL</h2>
+        <h3>STUDENT RESULT SLIP</h3>
+        <p>{{ exam.name }} - {{ exam.academic_year.year }}</p>
+    </div>
+
+    <!-- STUDENT INFO -->
+    <div style="margin-bottom:20px;">
+        <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
+        <p><strong>Reg No:</strong> {{ student.registration_number }}</p>
+        <p><strong>Class:</strong> {{ student.student_class }}</p>
+        <p><strong>Position:</strong> {{ result.position|default:"-" }}</p>
+    </div>
+
+    <!-- RESULTS TABLE -->
+    <table border="1" style="width:100%; border-collapse:collapse; text-align:center;">
+        <thead style="background:#2c3e50; color:white;">
+            <tr>
+                <th>Subject</th>
+
+                {% if show_marks %}
+                <th>Marks</th>
+                {% endif %}
+
+                <th>Grade</th>
+                <th>Remarks</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for sub in result.subjects %}
+            <tr>
+                <td>{{ sub.subject.name }}</td>
+
+                {% if show_marks %}
+                <td>
+                    {% if sub.is_absent %}
+                        ABS
+                    {% else %}
+                        {{ sub.total_marks|default:"-" }}
+                    {% endif %}
+                </td>
+                {% endif %}
+
+                <td><strong>{{ sub.grade }}</strong></td>
+
+                <td>
+                    {% if sub.grade == 'A' %}Excellent
+                    {% elif sub.grade == 'B' %}Very Good
+                    {% elif sub.grade == 'C' %}Good
+                    {% elif sub.grade == 'D' %}Satisfactory
+                    {% elif sub.grade == 'E' %}Pass
+                    {% elif sub.grade == 'F' %}Fail
+                    {% else %}-
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- SUMMARY -->
+    <div style="margin-top:20px;">
+        <p><strong>Total Points:</strong> {{ result.total_points }}</p>
+        <p><strong>Division:</strong> {{ result.division }}</p>
+    </div>
+
+    <!-- BUTTONS -->
+    <div style="margin-top:25px; text-align:center;">
+
+        <a href="{% url 'download_student_pdf' exam.id student.id %}"
+           style="background:#dc3545; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+            📄 Download Slip
+        </a>
+
+        <a href="{% url 'class_results' exam.id student.student_class %}"
+           style="background:#6c757d; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+            ← Back to Class
+        </a>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends 'discipline/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'discipline/css/student_profile.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <i class="fas fa-user-graduate"></i>
+    <h2>{{ student.first_name }} {{ student.last_name }}</h2>
+</div>
+
+<!-- STUDENT INFO -->
+<div class="card">
+    <div class="card-header">
+        Student Information
+    </div>
+
+    <div class="card-body">
+        <p><strong>Registration:</strong> {{ student.registration_number }}</p>
+        <p><strong>Class:</strong> {{ student.student_class }}</p>
+    </div>
+</div>
+
+<!-- ACTION -->
+<div style="margin: 15px 0;">
+    <a href="{% url 'discipline:add_case' student.id %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Case
+    </a>
+</div>
+
+<!-- CASES TABLE -->
+<div class="table-card">
+    <table class="table-cases">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for case in cases %}
+            <tr>
+
+                <!-- TITLE -->
+                <td>
+                    <strong>{{ case.title }}</strong>
+                    <div class="muted">
+                        {{ case.description|truncatechars:60 }}
+                    </div>
+                </td>
+
+                <!-- TYPE -->
+                <td>
+                    <span class="badge {% if case.case_type == 'major' %}badge-major{% else %}badge-minor{% endif %}">
+                        {{ case.get_case_type_display }}
+                    </span>
+                </td>
+
+                <!-- STATUS -->
+                <td>
+                    <span class="badge {% if case.status == 'open' %}badge-open{% else %}badge-resolved{% endif %}">
+                        {{ case.get_status_display }}
+                    </span>
+
+                    {% if case.suspension_id %}
+                        {% if case.suspension.status == 'active' %}
+                            <span class="badge badge-warning">Suspended</span>
+                        {% endif %}
+
+                        {% if case.suspension.status == 'completed' %}
+                            <span class="badge badge-success">Completed</span>
+                        {% endif %}
+
+                        {% if case.suspension.is_overdue %}
+                            <span class="badge badge-danger">Overdue</span>
+                        {% endif %}
+
+                        <div class="muted">
+                            {{ case.suspension.start_date }} → {{ case.suspension.end_date }}
+                        </div>
+                    {% endif %}
+                </td>
+
+                <!-- DATE -->
+                <td>{{ case.date_of_incident|date:"M d, Y" }}</td>
+
+                <!-- ACTION -->
+                <td>
+                    <a href="{% url 'discipline:edit_case' case.id %}" class="btn btn-sm">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </td>
+
+            </tr>
+
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No discipline cases found</p>
+
+                    <a href="{% url 'discipline:add_case' student.id %}" class="btn btn-success">
+                        Add First Case
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

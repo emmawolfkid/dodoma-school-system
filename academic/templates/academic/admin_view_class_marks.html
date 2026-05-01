@@ -1,0 +1,172 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto; padding: 20px;">
+    
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; 
+                padding: 20px; 
+                border-radius: 10px; 
+                margin-bottom: 25px;">
+        <h2 style="margin: 0;">📊 Academic Admin - Results Overview</h2>
+        <p style="margin: 5px 0 0; opacity: 0.9;">Monitor exam results and marks upload status</p>
+    </div>
+    
+    <!-- Filter Form -->
+    <div style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <form method="GET" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Exam:</label>
+                <select name="exam_id" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;" required>
+                    <option value="">-- Select Exam --</option>
+                    {% for exam in exams %}
+                    <option value="{{ exam.id }}" {% if selected_exam.id == exam.id %}selected{% endif %}>
+                        {{ exam.name }} - {{ exam.student_class|default:"All Classes" }} ({{ exam.academic_year.year }})
+                        {% if exam.is_published %}✅ Published{% elif exam.is_locked %}🔒 Locked{% else %}📝 Open{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Class:</label>
+                <select name="student_class" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;" required>
+                    <option value="">-- Select Class --</option>
+                    {% for class in classes %}
+                    <option value="{{ class }}" {% if selected_class == class %}selected{% endif %}>{{ class }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: flex; align-items: flex-end;">
+                <button type="submit" style="width: 100%; background: #007bff; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                    🔍 View Results
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    {% if selected_exam and selected_class %}
+    
+    <!-- Subject Marks Status -->
+    <div style="background: white; border-radius: 10px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="background: #28a745; color: white; padding: 15px;">
+            <h3 style="margin: 0;">📚 Subject Marks Status</h3>
+            <p style="margin: 5px 0 0; opacity: 0.9;">{% if all_uploaded %}✅ All subjects complete{% else %}⚠️ Some subjects pending{% endif %}</p>
+        </div>
+        <div style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+                {% for subject_status in subjects_status %}
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px;">
+                    <span>
+                        <strong>{{ subject_status.subject.name }}</strong>
+                        <br>
+                        <small style="color: #666;">{{ subject_status.uploaded_count }}/{{ subject_status.total_students }}</small>
+                    </span>
+                    {% if subject_status.is_uploaded %}
+                        <span style="color: #28a745; font-size: 20px;">✅</span>
+                    {% else %}
+                        <span style="color: #dc3545; font-size: 20px;">❌</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center;">
+        {% if not selected_exam.is_locked and all_uploaded %}
+        <form method="POST" action="{% url 'generate_results' selected_exam.id %}">
+            {% csrf_token %}
+            <button type="submit" style="background: #ffc107; color: #333; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                🎯 Generate Results & Lock Exam
+            </button>
+        </form>
+        {% endif %}
+        
+        {% if selected_exam.is_locked and not selected_exam.is_published %}
+        <form method="POST" action="{% url 'publish_results' selected_exam.id %}">
+            {% csrf_token %}
+            <button type="submit" style="background: #28a745; color: white; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                📢 Publish Results
+            </button>
+        </form>
+        {% endif %}
+        
+        {% if selected_exam.is_published %}
+        <div style="background: #d4edda; padding: 12px 25px; border-radius: 6px;">
+            ✅ Results Published
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Results Table -->
+    <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <div style="background: #007bff; color: white; padding: 15px;">
+            <h3 style="margin: 0;">{{ selected_exam.name }} - {{ selected_class }} Results</h3>
+            <p style="margin: 5px 0 0; opacity: 0.9;">Total Students: {{ results_data.total_students|default:"0" }}</p>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px; text-align: center;">Position</th>
+                        <th style="padding: 12px; text-align: left;">Student Name</th>
+                        <th style="padding: 12px; text-align: left;">Reg No</th>
+                        <th style="padding: 12px; text-align: center;">Total Points</th>
+                        <th style="padding: 12px; text-align: center;">Division</th>
+                        <th style="padding: 12px; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if results_data and results_data.results %}
+                        {% for result in results_data.results %}
+                        <tr style="border-bottom: 1px solid #dee2e6;">
+                            <td style="padding: 12px; text-align: center; font-weight: bold;">{{ result.position }}</td>
+                            <td style="padding: 12px;">{{ result.student.first_name }} {{ result.student.last_name }}</td>
+                            <td style="padding: 12px;">{{ result.student.registration_number }}</td>
+                            <td style="padding: 12px; text-align: center;">{{ result.total_points }}</td>
+                            <td style="padding: 12px; text-align: center;">
+                                <span style="background: #e3f2fd; padding: 4px 12px; border-radius: 20px; font-weight: bold;">
+                                    {{ result.division }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px; text-align: center;">
+                                <a href="{% url 'student_result_detail' selected_exam.id result.student.id %}" 
+                                   style="color: #007bff; text-decoration: none;">
+                                    View Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                                {% if not all_uploaded %}
+                                    ⚠️ Cannot generate results until all subjects have marks uploaded.
+                                {% elif not selected_exam.is_locked %}
+                                    Click "Generate Results" above to create results.
+                                {% else %}
+                                    No results generated yet.
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}

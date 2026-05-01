@@ -1,0 +1,63 @@
+{% for data in page_obj %}
+<div class="user-card {{ data.role|lower|slugify }}">
+    
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h3>👨‍🏫 {{ data.user.get_full_name|default:data.user.username }}</h3>
+
+            <span class="badge {{ data.role|lower|slugify }}">
+                {{ data.role }}
+            </span>
+
+            <small>{{ data.user.email }} | {{ data.total_subjects }} subject(s)</small>
+        </div>
+
+        <a href="{% url 'assign_subjects' data.user.id %}" class="btn-add">
+            ➕ Add More
+        </a>
+    </div>
+
+    <!-- Table -->
+    {% if data.assignments %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Class</th>
+                    <th>Assigned</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in data.assignments %}
+                <tr>
+                    <td>
+                        <strong>{{ assignment.subject.name }}</strong><br>
+                        <small>{{ assignment.subject.code }}</small>
+                    </td>
+                    <td>
+                        <span class="class-badge">
+                            {{ assignment.student_class }}
+                        </span>
+                    </td>
+                    <td>{{ assignment.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <a href="{% url 'edit_teacher_assignment' assignment.id %}" class="btn-edit">✏️</a>
+                        <a href="{% url 'admin_remove_subject' assignment.id %}" class="btn-delete"
+                           onclick="return confirm('Remove this assignment?')">❌</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+{% empty %}
+<div class="empty-box">
+    <h3>No assignments found</h3>
+</div>
+{% endfor %}

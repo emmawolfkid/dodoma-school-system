@@ -1,0 +1,79 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Archived Students{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/archived.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">📦 Archived Students</h1>
+    <p class="page-description">View and restore archived student records</p>
+    {% if archived_count %}
+        <div class="stats-badge">Total Archived: {{ archived_count }}</div>
+    {% endif %}
+</div>
+
+{% if students %}
+<div class="archived-list">
+    {% for s in students %}
+    <div class="archived-item">
+        <div class="student-info">
+            <div class="student-name">
+                {{ s.first_name }} {{ s.middle_name|default:'' }} {{ s.last_name }}
+            </div>
+            <div class="student-details">
+                {% if s.registration_number %}
+                    <span class="reg-number">Reg: {{ s.registration_number }}</span>
+                {% endif %}
+                {% if s.archived_at %}
+                    <span class="archive-date">📅 Archived: {{ s.archived_at|date:"F d, Y" }} at {{ s.archived_at|date:"g:i A" }}</span>
+                {% else %}
+                    <span class="archive-date">📅 Archived date not recorded</span>
+                {% endif %}
+            </div>
+            {% if s.student_class %}
+            <div class="student-class-info">
+                <span class="class-badge">{{ s.student_class }} - Section {{ s.section }}</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'restore_student' s.id %}" class="btn-restore" onclick="return confirm('Are you sure you want to restore {{ s.first_name }}?')">
+                ↻ Restore
+            </a>
+            <a href="{% url 'student_detail' s.id %}" class="btn-view">
+                👁️ View Details
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Optional: Add pagination if you have many archived students -->
+{% if students.has_other_pages %}
+<div class="pagination">
+    {% if students.has_previous %}
+        <a href="?page=1">&laquo; First</a>
+        <a href="?page={{ students.previous_page_number }}">Previous</a>
+    {% endif %}
+    
+    <span class="current-page">Page {{ students.number }} of {{ students.paginator.num_pages }}</span>
+    
+    {% if students.has_next %}
+        <a href="?page={{ students.next_page_number }}">Next</a>
+        <a href="?page={{ students.paginator.num_pages }}">Last &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <p>No archived students</p>
+    <small>Archived students will appear here with their archive dates</small>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}Edit Student{% else %}Register Student{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/register.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if edit_mode %}✏️ Edit Student{% else %}🎓 Register New Student{% endif %}</h1>
+    <p class="page-description">
+        {% if edit_mode %}
+            Update student information
+        {% else %}
+            Enter complete student information below
+        {% endif %}
+    </p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-success">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if form.errors %}
+<div class="alert alert-error">
+    <strong>Please fix the following errors:</strong>
+    <ul>
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+                <li>{{ field }}: {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="registration-form">
+    <form method="post" enctype="multipart/form-data" id="studentForm">
+        {% csrf_token %}
+        
+        <div class="form-grid">
+            <div class="form-field full-width">
+                <label>Registration Number *</label>
+                {{ form.registration_number }}
+                <small>Unique registration number for the student</small>
+            </div>
+            
+            <div class="form-field">
+                <label>First Name *</label>
+                {{ form.first_name }}
+            </div>
+            
+            <div class="form-field">
+                <label>Middle Name</label>
+                {{ form.middle_name }}
+            </div>
+            
+            <div class="form-field">
+                <label>Last Name</label>
+                {{ form.last_name }}
+            </div>
+            
+            <div class="form-field">
+                <label>Gender *</label>
+                {{ form.gender }}
+            </div>
+            
+            <div class="form-field">
+                <label>Date of Birth *</label>
+                {{ form.date_of_birth }}
+            </div>
+            
+            <div class="form-field">
+                <label>Class *</label>
+                {{ form.student_class }}
+            </div>
+            
+            <div class="form-field">
+                <label>Section *</label>
+                {{ form.section }}
+            </div>
+            
+            <div class="form-field">
+                <label>Date of Admission *</label>
+                {{ form.date_of_admission }}
+            </div>
+            
+            <div class="form-field">
+                <label>Region *</label>
+                {{ form.region }}
+            </div>
+            
+            <div class="form-field">
+                <label>District *</label>
+                {{ form.district }}
+            </div>
+            
+            <div class="form-field">
+                <label>Division</label>
+                {{ form.division }}
+            </div>
+            
+            <div class="form-field">
+                <label>Ward *</label>
+                {{ form.ward }}
+            </div>
+            
+            <div class="form-field">
+                <label>Village *</label>
+                {{ form.village }}
+            </div>
+            
+            <div class="form-field">
+                <label>Tribe</label>
+                {{ form.tribe }}
+            </div>
+            
+            <div class="form-field">
+                <label>Last School Attended</label>
+                {{ form.last_school_attended }}
+            </div>
+            
+            <div class="form-field">
+                <label>Parent Name *</label>
+                {{ form.parent_name }}
+            </div>
+            
+            <div class="form-field">
+                <label>Parent Phone *</label>
+                {{ form.parent_phone }}
+                <small>Primary contact number</small>
+            </div>
+            
+            <div class="form-field">
+                <label>Parent Phone 2</label>
+                {{ form.parent_phone2 }}
+                <small>Optional secondary number</small>
+            </div>
+            
+            <div class="form-field">
+                <label>Nearby Person Phone</label>
+                {{ form.nearby_person_phone }}
+                <small>Emergency contact</small>
+            </div>
+            
+            <div class="form-field">
+                <label>Health Status *</label>
+                {{ form.health_status }}
+            </div>
+            
+            <div class="form-field">
+                <label>School Status *</label>
+                {{ form.school_status }}
+            </div>
+            
+            <div class="form-field full-width">
+                <label>Equipments Issued</label>
+                {{ form.equipments }}
+                <small>Select equipment issued to student</small>
+            </div>
+            
+            <div class="form-field full-width">
+                <label>Profile Photo</label>
+                {{ form.profile_photo }}
+                <small>Upload student photo (optional)</small>
+                {% if edit_mode and student.profile_photo %}
+                    <p><small>Current photo on file</small></p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">
+                {% if edit_mode %}💾 Save Changes{% else %}✅ Register Student{% endif %}
+            </button>
+            <a href="{% url 'view_students' %}" class="btn-cancel">← Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Pure JavaScript - No Django template tags inside
+document.addEventListener("DOMContentLoaded", function() {
+    const classField = document.getElementById("id_student_class");
+    const sectionField = document.getElementById("id_section");
+    
+    if (classField && sectionField) {
+        const ordinary = ['A','B','C','D','E','F'];
+        const advanced = ['PCB','PCM','PMC','CBG','EGM','HGK','HGL'];
+        
+        function updateSections() {
+            const selected = classField.value;
+            const isAdvanced = (selected === "Form 5" || selected === "Form 6");
+            const options = isAdvanced ? advanced : ordinary;
+            
+            // Clear current options
+            sectionField.innerHTML = "";
+            
+            // Add new options
+            options.forEach(function(sec) {
+                const opt = document.createElement("option");
+                opt.value = sec;
+                opt.textContent = sec;
+                sectionField.appendChild(opt);
+            });
+        }
+        
+        classField.addEventListener("change", updateSections);
+        updateSections(); // Initialize on page load
+    }
+});
+</script>
+{% endblock %}

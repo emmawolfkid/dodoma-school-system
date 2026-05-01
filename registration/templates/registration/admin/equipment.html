@@ -1,0 +1,148 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Manage Equipment{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/equipment.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">🔧 Equipment Management</h1>
+    <p class="page-description">Add and manage school equipment inventory</p>
+</div>
+
+<!-- Stats Card -->
+<div class="stats-card">
+    <div class="stats-info">
+        <h3>Total Equipment</h3>
+        <div class="stats-number">{{ equipments|length }}</div>
+    </div>
+    <div class="stats-icon">
+        🔧
+    </div>
+</div>
+
+<!-- Add Equipment Form -->
+<div class="add-equipment-form">
+    <div class="form-title">
+        📝 Add New Equipment
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <div class="form-field">
+                <label for="equipment-name">Equipment Name</label>
+                <input type="text" 
+                       id="equipment-name" 
+                       name="name" 
+                       placeholder="e.g., Projector, Laptop, Microscope..."
+                       required>
+            </div>
+            <button type="submit" class="btn-add">
+                ➕ Add Equipment
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Equipment List -->
+<div class="equipment-list">
+    <div class="list-header">
+        <h3>
+            📋 Equipment Inventory
+            <span>({{ equipments|length }} items)</span>
+        </h3>
+    </div>
+    
+    {% if equipments %}
+    <ul class="equipment-items">
+        {% for e in equipments %}
+        <li class="equipment-item">
+            <div class="equipment-info">
+                <div class="equipment-icon">
+                    {% if 'computer' in e.name|lower or 'laptop' in e.name|lower %}
+                        💻
+                    {% elif 'projector' in e.name|lower %}
+                        📽️
+                    {% elif 'book' in e.name|lower %}
+                        📚
+                    {% elif 'table' in e.name|lower or 'chair' in e.name|lower %}
+                        🪑
+                    {% else %}
+                        🔧
+                    {% endif %}
+                </div>
+                <div class="equipment-name">
+                    {{ e.name }}
+                    {% if e.created_at %}
+                    <span class="equipment-date">
+                        Added: {{ e.created_at|date:"M d, Y" }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="equipment-actions">
+                <a href="#" class="btn-edit" onclick="editEquipment('{{ e.id }}', '{{ e.name }}')">
+                    ✏️ Edit
+                </a>
+                <a href="#" class="btn-delete" onclick="deleteEquipment('{{ e.id }}', '{{ e.name }}')">
+                    🗑️ Delete
+                </a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🔧</div>
+        <p>No equipment added yet</p>
+        <small>Use the form above to add your first equipment item</small>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// JavaScript for edit and delete (you'll need to implement these views)
+function editEquipment(id, name) {
+    const newName = prompt('Edit equipment name:', name);
+    if (newName && newName !== name) {
+        // Submit a POST request to edit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/registration/equipment/${id}/edit/`;
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const nameInput = document.createElement('input');
+        nameInput.type = 'hidden';
+        nameInput.name = 'name';
+        nameInput.value = newName;
+        form.appendChild(csrf);
+        form.appendChild(nameInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function deleteEquipment(id, name) {
+    if (confirm(`Are you sure you want to delete "${name}"?`)) {
+        // Submit a POST request to delete
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/registration/equipment/${id}/delete/`;
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

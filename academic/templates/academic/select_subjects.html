@@ -1,0 +1,119 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div style="max-width: 900px; margin: auto; padding: 20px;">
+
+    <h2>➕ Request Subjects</h2>
+    <p>Select a class, then choose subjects</p>
+
+    <form method="POST" style="background:white; padding:20px; border-radius:10px;">
+        {% csrf_token %}
+
+        <!-- CLASS -->
+        <select name="class" id="classSelect" required style="width:100%; padding:10px; margin-bottom:20px;">
+            <option value="">-- Select Class --</option>
+            <option value="Form 1" data-level="O">Form 1</option>
+            <option value="Form 2" data-level="O">Form 2</option>
+            <option value="Form 3" data-level="O">Form 3</option>
+            <option value="Form 4" data-level="O">Form 4</option>
+            <option value="Form 5" data-level="A">Form 5</option>
+            <option value="Form 6" data-level="A">Form 6</option>
+        </select>
+
+        <!-- SUBJECTS -->
+        <div id="subjectsContainer" style="display:none;">
+
+            <!-- O LEVEL -->
+            <div id="olevelSubjects" style="display:none;">
+                <h3 style="background:#4CAF50;color:white;padding:8px;">O-Level Subjects</h3>
+
+                {% for subject in subjects %}
+                    {% if subject.level == 'O' %}
+                    <label>
+                        <input type="checkbox" name="subjects" value="{{ subject.id }}">
+                        {{ subject.name }} ({{ subject.code }})
+                    </label><br>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- A LEVEL -->
+            <div id="alevelSubjects" style="display:none;">
+                <h3 style="background:#2196F3;color:white;padding:8px;">A-Level Subjects</h3>
+
+                {% for subject in subjects %}
+                    {% if subject.level == 'A' %}
+                    <label>
+                        <input type="checkbox" name="subjects" value="{{ subject.id }}">
+                        {{ subject.name }} ({{ subject.code }})
+                    </label><br>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+        </div>
+
+        <br>
+
+        <button type="submit" style="padding:10px 20px; background:#4CAF50; color:white;">
+            📤 Submit Request
+        </button>
+
+    </form>
+
+    <!-- REQUEST HISTORY -->
+    <div style="margin-top:30px;">
+        <h3>📋 Your Requests</h3>
+
+        {% if user_requests %}
+            <table border="1" cellpadding="10" width="100%">
+                <tr>
+                    <th>Class</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+
+                {% for req in user_requests %}
+                <tr>
+                    <td>{{ req.student_class }}</td>
+                    <td>{{ req.subject.name }}</td>
+                    <td>
+                        {% if req.is_approved %}
+                            <span style="color:green;">Approved</span>
+                        {% else %}
+                            <span style="color:orange;">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ req.created_at|date:"Y-m-d" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>No requests yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+const classSelect = document.getElementById("classSelect");
+const olevel = document.getElementById("olevelSubjects");
+const alevel = document.getElementById("alevelSubjects");
+const container = document.getElementById("subjectsContainer");
+
+classSelect.addEventListener("change", function(){
+    let level = this.options[this.selectedIndex].dataset.level;
+
+    container.style.display = "block";
+    olevel.style.display = "none";
+    alevel.style.display = "none";
+
+    document.querySelectorAll("input[name='subjects']").forEach(cb => cb.checked = false);
+
+    if(level === "O") olevel.style.display = "block";
+    if(level === "A") alevel.style.display = "block";
+});
+</script>
+
+{% endblock %}

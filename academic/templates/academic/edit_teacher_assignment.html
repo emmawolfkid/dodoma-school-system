@@ -1,0 +1,45 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: white; border-radius: 10px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2>✏️ Edit Assignment</h2>
+        
+        <div style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+            <p><strong>Teacher:</strong> {{ assignment.teacher.get_full_name|default:assignment.teacher.username }}</p>
+            <p><strong>Subject:</strong> {{ assignment.subject.name }} ({{ assignment.subject.code }})</p>
+            <p><strong>Current Class:</strong> {{ assignment.student_class }}</p>
+        </div>
+        
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Change Class:</label>
+                <select name="new_class" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    <option value="">-- Select New Class --</option>
+                    {% for class in classes %}
+                    <option value="{{ class }}" {% if assignment.student_class == class %}selected{% endif %}>{{ class }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" name="action" value="change_class" 
+                        style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    💾 Update Class
+                </button>
+                <button type="submit" name="action" value="remove" 
+                        onclick="return confirm('Remove this assignment?')"
+                        style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                    ❌ Remove Assignment
+                </button>
+                <a href="{% url 'manage_teacher_subjects' %}" 
+                   style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

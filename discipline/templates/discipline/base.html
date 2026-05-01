@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodoma School System - Discipline Module</title>
+
+    {% load static %}
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ✅ MAIN BASE CSS (ONLY SOURCE OF STYLE) -->
+    <link rel="stylesheet" href="{% static 'discipline/css/base.css' %}">
+
+    <!-- Page specific CSS -->
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<!-- 🔔 NOTIFICATIONS -->
+{% if messages %}
+<div class="messages-container">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        <i class="fas fa-info-circle"></i> {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+
+<!-- 🔷 SIDEBAR -->
+<div class="sidebar" id="sidebar">
+
+    <!-- LOGO -->
+    <div class="sidebar-logo">
+        <div class="logo-image">
+            <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+        </div>
+
+        <div class="logo-text">
+            <strong>Dodoma</strong>
+            <span>School System</span>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <a href="/accounts/dashboard/">
+        <i class="fas fa-home"></i> <span>Dashboard</span>
+    </a>
+
+    <h4 class="sidebar-title">Modules</h4>
+
+    <a href="/discipline/students/">
+        <i class="fas fa-user-graduate"></i> <span>Students</span>
+    </a>
+
+    <a href="/discipline/">
+        <i class="fas fa-gavel"></i> <span>Discipline</span>
+    </a>
+
+    <!-- ADD CASE -->
+    <a href="/discipline/students/" class="highlight-link">
+        <i class="fas fa-plus-circle"></i> <span>Add Case</span>
+    </a>
+
+    <a href="/discipline/cases/">
+        <i class="fas fa-list-check"></i> <span>All Cases</span>
+    </a>
+
+    <a href="/academic/">
+        <i class="fas fa-book"></i> <span>Academic</span>
+    </a>
+
+    {% if request.user.is_superuser %}
+    <h4 class="sidebar-title">Admin</h4>
+    <a href="/admin/">
+        <i class="fas fa-user-shield"></i> <span>System Admin</span>
+    </a>
+    {% endif %}
+
+    <div class="sidebar-footer">
+        <a href="/accounts/logout/">
+            <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+        </a>
+    </div>
+
+</div>
+
+
+<!-- 🔷 MAIN -->
+<div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+
+        <!-- MOBILE MENU BUTTON -->
+        <div class="topbar-left">
+            <span class="menu-toggle" id="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </span>
+
+            <span class="page-info">
+                Discipline Management
+            </span>
+        </div>
+
+        <div class="user-info">
+            <i class="fas fa-user-circle"></i>
+            {{ request.user.username }}
+        </div>
+
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+
+<!-- 🔥 JAVASCRIPT -->
+<script>
+
+// 🔔 Auto-hide alerts
+setTimeout(function() {
+    document.querySelectorAll('.alert').forEach(el => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 400);
+    });
+}, 4000);
+
+
+// 📱 Mobile Sidebar Toggle
+const toggle = document.getElementById("menu-toggle");
+const sidebar = document.getElementById("sidebar");
+
+if (toggle) {
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+    });
+}
+
+</script>
+
+</body>
+</html>

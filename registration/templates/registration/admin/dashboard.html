@@ -1,0 +1,68 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Admin Dashboard</h1>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-number">{{ pending_users|length }}</div>
+        <div class="stat-label">Pending Approvals</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number">{{ users_count|default:"0" }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Pending User Approvals</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr><th>Username</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for u in pending_users %}
+                <tr>
+                    <td>{{ u.user.username }}</td>
+                    <td><a href="{% url 'approve_user_registration' u.id %}" class="btn btn-sm btn-success">✓ Approve</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2">No pending approvals</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="actions-grid">
+    <a href="{% url 'manage_registration_users' %}" class="action-card">
+        <div class="action-icon">👥</div>
+        <h3>Manage Users</h3>
+        <p>Control user permissions</p>
+    </a>
+    <a href="{% url 'manage_equipment' %}" class="action-card">
+        <div class="action-icon">🔧</div>
+        <h3>Manage Equipment</h3>
+        <p>Track school equipment</p>
+    </a>
+    <a href="{% url 'archived_students' %}" class="action-card">
+        <div class="action-icon">📦</div>
+        <h3>Archived Students</h3>
+        <p>View archived records</p>
+    </a>
+</div>
+{% endblock %}

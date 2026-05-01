@@ -1,0 +1,78 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px; margin:auto; padding:20px;">
+
+<h2>📋 Subject Requests Management</h2>
+<p>Approve or reject teacher subject requests</p>
+
+<hr>
+
+{% if requests %}
+
+<table style="width:100%; border-collapse:collapse;">
+
+<tr style="background:#007bff; color:white;">
+    <th>Teacher</th>
+    <th>Subject</th>
+    <th>Class</th>
+    <th>Level</th>
+    <th>Date</th>
+    <th>Actions</th>
+</tr>
+
+{% for r in requests %}
+<tr style="border-bottom:1px solid #ddd;">
+
+<td>
+    <strong>{{ r.teacher.get_full_name|default:r.teacher.username }}</strong><br>
+    <small>{{ r.teacher.email }}</small>
+</td>
+
+<td>
+    {{ r.subject.name }}<br>
+    <small>{{ r.subject.code }}</small>
+</td>
+
+<td>{{ r.student_class }}</td>
+
+<td>
+    {% if r.subject.level == 'O' %}
+        <span style="color:green;">O-Level</span>
+    {% else %}
+        <span style="color:blue;">A-Level</span>
+    {% endif %}
+</td>
+
+<td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+
+<td>
+    <a href="{% url 'approve_request' r.id %}"
+       style="background:#28a745; color:white; padding:6px 12px; text-decoration:none;">
+       ✅ Approve
+    </a>
+
+    <a href="{% url 'reject_request' r.id %}"
+       style="background:#dc3545; color:white; padding:6px 12px; text-decoration:none;">
+       ❌ Reject
+    </a>
+</td>
+
+</tr>
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div style="text-align:center; padding:50px;">
+    <h3 style="color:#28a745;">✅ No Pending Requests</h3>
+    <p>Everything is handled</p>
+</div>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

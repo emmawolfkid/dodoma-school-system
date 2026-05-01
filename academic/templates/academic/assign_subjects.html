@@ -1,0 +1,118 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+        <h2>🎯 Assign Subjects to {{ user.get_full_name|default:user.username }}</h2>
+        <p>Email: {{ user.email }}</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+
+        <!-- LEFT -->
+        <div style="background: white; padding: 20px; border-radius: 10px;">
+            <h3>➕ Assign Subjects</h3>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- CLASS -->
+                <select name="class_select" id="classSelect" required style="width:100%; padding:10px; margin-bottom:15px;">
+                    <option value="">-- Select Class --</option>
+                    <option value="Form 1" data-level="O">Form 1</option>
+                    <option value="Form 2" data-level="O">Form 2</option>
+                    <option value="Form 3" data-level="O">Form 3</option>
+                    <option value="Form 4" data-level="O">Form 4</option>
+                    <option value="Form 5" data-level="A">Form 5</option>
+                    <option value="Form 6" data-level="A">Form 6</option>
+                </select>
+
+                <!-- O LEVEL -->
+                <div id="olevelSubjects" style="display:none;">
+                    <h4 style="background:#4CAF50;color:white;padding:8px;">O-Level Subjects</h4>
+                    {% for subject in subjects %}
+                        {% if subject.level == 'O' %}
+                        <label>
+                            <input type="checkbox" name="subjects" value="{{ subject.id }}">
+                            {{ subject.name }} ({{ subject.code }})
+                        </label><br>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- A LEVEL -->
+                <div id="alevelSubjects" style="display:none;">
+                    <h4 style="background:#2196F3;color:white;padding:8px;">A-Level Subjects</h4>
+                    {% for subject in subjects %}
+                        {% if subject.level == 'A' %}
+                        <label>
+                            <input type="checkbox" name="subjects" value="{{ subject.id }}">
+                            {{ subject.name }} ({{ subject.code }})
+                        </label><br>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <br>
+                <button type="submit" style="width:100%; padding:12px; background:#4CAF50; color:white;">
+                    ✅ Assign Subjects
+                </button>
+            </form>
+        </div>
+
+        <!-- RIGHT -->
+        <div style="background: white; padding: 20px; border-radius: 10px;">
+            <h3>📚 Assigned Subjects</h3>
+
+            {% if assigned %}
+                <table style="width:100%;">
+                    <tr>
+                        <th>Subject</th>
+                        <th>Class</th>
+                        <th>Level</th>
+                        <th></th>
+                    </tr>
+
+                    {% for ts in assigned %}
+                    <tr>
+                        <td>{{ ts.subject.name }}</td>
+                        <td>{{ ts.student_class }}</td>
+                        <td>
+                            {% if ts.level == 'O' %}
+                                <span style="color:green;">O-Level</span>
+                            {% else %}
+                                <span style="color:blue;">A-Level</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_remove_subject' ts.id %}" style="color:red;">Remove</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>No subjects assigned yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById("classSelect").addEventListener("change", function() {
+    let level = this.options[this.selectedIndex].dataset.level;
+
+    document.getElementById("olevelSubjects").style.display = "none";
+    document.getElementById("alevelSubjects").style.display = "none";
+
+    if(level === "O"){
+        document.getElementById("olevelSubjects").style.display = "block";
+    }
+    if(level === "A"){
+        document.getElementById("alevelSubjects").style.display = "block";
+    }
+});
+</script>
+
+{% endblock %}

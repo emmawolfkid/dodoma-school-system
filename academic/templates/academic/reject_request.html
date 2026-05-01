@@ -1,0 +1,48 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width:600px; margin:auto; padding:20px;">
+
+<h2 style="color:#dc3545;">❌ Reject Subject Request</h2>
+
+<div style="background:#fff3cd; padding:15px; border-radius:6px; margin-bottom:20px;">
+    <p><strong>Teacher:</strong> {{ request_obj.teacher.get_full_name|default:request_obj.teacher.username }}</p>
+    <p><strong>Subject:</strong> {{ request_obj.subject.name }} ({{ request_obj.subject.code }})</p>
+    <p><strong>Class:</strong> {{ request_obj.student_class }}</p>
+
+    <p>
+        <strong>Level:</strong>
+        {% if request_obj.subject.level == 'O' %}
+            <span style="color:green;">O-Level</span>
+        {% else %}
+            <span style="color:blue;">A-Level</span>
+        {% endif %}
+    </p>
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label><strong>Reason for rejection:</strong></label><br>
+    <textarea name="reason" required
+        style="width:100%; height:120px; padding:10px; margin-top:10px;"></textarea>
+
+    <br><br>
+
+    <div style="display:flex; gap:10px;">
+        <button type="submit"
+            style="background:#dc3545; color:white; padding:10px 20px; border:none;">
+            ❌ Confirm Reject
+        </button>
+
+        <a href="{% url 'approve_subject_requests' %}"
+            style="background:#6c757d; color:white; padding:10px 20px; text-decoration:none;">
+            ← Cancel
+        </a>
+    </div>
+</form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'discipline/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'discipline/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <div class="card-header">
+        <i class="fas fa-school"></i>
+        <span>Select Class</span>
+    </div>
+    
+    <div class="card-body">
+
+        <p class="muted-text">
+            Select a class to view its students and their discipline records.
+        </p>
+        
+        <!-- CLASS GRID -->
+        <div class="stats-grid">
+
+            {% for c in classes %}
+            <a href="{% url 'discipline:students_by_class' c %}" class="stat-card class-card">
+
+                <i class="fas fa-users class-icon"></i>
+
+                <div class="stat-label">
+                    Class {{ c }}
+                </div>
+
+            </a>
+            {% empty %}
+            <div class="empty-state full-width">
+                <i class="fas fa-folder-open"></i>
+                <p>No classes found in the system.</p>
+            </div>
+            {% endfor %}
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

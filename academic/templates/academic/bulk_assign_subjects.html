@@ -1,0 +1,118 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+    <div style="background: white; border-radius: 10px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2>📦 Bulk Assign Subjects</h2>
+        <p>Assign multiple subjects to multiple teachers at once</p>
+        
+        <form method="POST">
+            {% csrf_token %}
+            
+            <!-- CLASS -->
+            <div style="margin-bottom: 25px;">
+                <label><strong>Select Class:</strong></label>
+                <select name="class" id="classSelect" required style="width:100%; padding:10px;">
+                    <option value="">-- Select Class --</option>
+                    {% for class in classes %}
+                    <option value="{{ class }}">{{ class }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                
+                <!-- TEACHERS -->
+                <div>
+                    <label><strong>Teachers:</strong></label>
+                    <div style="border:1px solid #ddd; padding:10px; max-height:300px; overflow:auto;">
+                        <label>
+                            <input type="checkbox" id="selectAllTeachers"> Select All
+                        </label>
+                        <hr>
+                        {% for teacher in teachers %}
+                        <label style="display:block;">
+                            <input type="checkbox" name="teachers" value="{{ teacher.id }}" class="teacher-checkbox">
+                            {{ teacher.get_full_name|default:teacher.username }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- SUBJECTS -->
+                <div>
+                    <label><strong>Subjects:</strong></label>
+
+                    <!-- O LEVEL -->
+                    <div id="olevelSubjects" style="display:none;">
+                        <h4>📘 O-Level Subjects</h4>
+                        {% for subject in subjects %}
+                            {% if subject.level == 'O' %}
+                            <label style="display:block;">
+                                <input type="checkbox" name="subjects" value="{{ subject.id }}" class="subject-checkbox olevel">
+                                {{ subject.name }}
+                            </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- A LEVEL -->
+                    <div id="alevelSubjects" style="display:none;">
+                        <h4>🎓 A-Level Subjects</h4>
+                        {% for subject in subjects %}
+                            {% if subject.level == 'A' %}
+                            <label style="display:block;">
+                                <input type="checkbox" name="subjects" value="{{ subject.id }}" class="subject-checkbox alevel">
+                                {{ subject.name }}
+                            </label>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <br>
+
+            <button type="submit" style="background:#28a745;color:white;padding:10px 20px;">
+                ✅ Assign
+            </button>
+
+            <a href="{% url 'manage_teacher_subjects' %}" style="padding:10px;background:#6c757d;color:white;">
+                Cancel
+            </a>
+
+        </form>
+    </div>
+</div>
+
+<script>
+const classSelect = document.getElementById('classSelect');
+const olevel = document.getElementById('olevelSubjects');
+const alevel = document.getElementById('alevelSubjects');
+
+classSelect.addEventListener('change', function() {
+    const value = this.value;
+
+    olevel.style.display = 'none';
+    alevel.style.display = 'none';
+
+    document.querySelectorAll('.subject-checkbox').forEach(cb => cb.checked = false);
+
+    if (["Form 1","Form 2","Form 3","Form 4"].includes(value)) {
+        olevel.style.display = 'block';
+    }
+
+    if (["Form 5","Form 6"].includes(value)) {
+        alevel.style.display = 'block';
+    }
+});
+
+// select all teachers
+document.getElementById('selectAllTeachers').addEventListener('change', function() {
+    document.querySelectorAll('.teacher-checkbox').forEach(cb => cb.checked = this.checked);
+});
+</script>
+
+{% endblock %}

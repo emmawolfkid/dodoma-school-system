@@ -1,0 +1,201 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/users.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">👥 User Management</h1>
+    <p class="page-description">Manage user permissions and access levels</p>
+</div>
+
+<!-- Search and Filter -->
+<div class="card filter-card">
+    <form method="get" class="filter-form" id="filterForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label>🔍 Search User:</label>
+                <input type="text" name="search" value="{{ search_query }}" 
+                       placeholder="Username or email...">
+            </div>
+            <div class="form-group">
+                <label>Filter by Role:</label>
+                <select name="role">
+                    <option value="">All Users</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admins</option>
+                    <option value="pending" {% if role_filter == 'pending' %}selected{% endif %}>Pending Approval</option>
+                    <option value="approved" {% if role_filter == 'approved' %}selected{% endif %}>Approved</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="{% url 'manage_registration_users' %}" class="btn btn-secondary">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">System Users</h2>
+        <span class="user-count">Total: {{ users|length }}</span>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="data-table" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Permissions</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr data-user-id="{{ u.id }}" data-user-username="{{ u.user.username }}">
+                    <td data-label="Username">
+                        <strong>{{ u.user.username }}</strong>
+                        {% if u.is_admin %}
+                            <span class="badge badge-admin">👑 Admin</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Email">{{ u.user.email|default:"—" }}</td>
+                    <td data-label="Status">
+                        {% if u.is_approved %}
+                            <span class="badge badge-success">✅ Approved</span>
+                        {% else %}
+                            <span class="badge badge-warning">⏳ Pending</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Permissions">
+                        <div class="permission-buttons">
+                            <button class="perm-btn {% if u.can_add %}perm-on{% else %}perm-off{% endif %}" 
+                                    data-action="toggle" data-perm="add">
+                                📝 Add
+                            </button>
+                            <button class="perm-btn {% if u.can_edit %}perm-on{% else %}perm-off{% endif %}" 
+                                    data-action="toggle" data-perm="edit">
+                                ✏️ Edit
+                            </button>
+                            <button class="perm-btn {% if u.can_delete %}perm-on{% else %}perm-off{% endif %}" 
+                                    data-action="toggle" data-perm="delete">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </td>
+                    <td data-label="Actions">
+                        <div class="action-buttons">
+                            {% if not u.is_approved %}
+                                <button class="btn btn-sm btn-success" data-action="approve">
+                                    ✓ Approve
+                                </button>
+                            {% endif %}
+                            
+                            <button class="btn btn-sm btn-warning" data-action="make-admin">
+                                👑 Make Admin
+                            </button>
+                            
+                            <button class="btn btn-sm btn-danger" data-action="remove-admin" 
+                                    {% if not u.is_admin %}disabled{% endif %}>
+                                👑 Remove Admin
+                            </button>
+                            
+                            <button class="btn btn-sm btn-secondary" data-action="reset-password">
+                                🔑 Reset Password
+                            </button>
+                            
+                            <button class="btn btn-sm btn-danger" data-action="remove-user">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-row">
+                        <div class="empty-state">
+                            <div class="empty-icon">👥</div>
+                            <p>No users found</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Handle all button clicks using event delegation
+document.addEventListener('click', function(e) {
+    const button = e.target.closest('[data-action]');
+    if (!button) return;
+    
+    const action = button.getAttribute('data-action');
+    const row = button.closest('tr');
+    if (!row) return;
+    
+    const userId = row.getAttribute('data-user-id');
+    const username = row.getAttribute('data-user-username');
+    
+    if (action === 'toggle') {
+        const perm = button.getAttribute('data-perm');
+        if (confirm(`Toggle ${perm} permission for ${username}?`)) {
+            window.location.href = `/registration/toggle/${userId}/${perm}/`;
+        }
+    }
+    else if (action === 'approve') {
+        if (confirm(`Approve ${username}?`)) {
+            window.location.href = `/registration/approve/${userId}/`;
+        }
+    }
+    else if (action === 'make-admin') {
+        if (confirm(`Make ${username} an admin?`)) {
+            window.location.href = `/registration/make-admin/${userId}/`;
+        }
+    }
+    else if (action === 'remove-admin') {
+        if (confirm(`Remove admin privileges from ${username}?`)) {
+            window.location.href = `/registration/remove-admin/${userId}/`;
+        }
+    }
+    else if (action === 'reset-password') {
+        if (confirm(`Reset password for ${username} to default (123456)?`)) {
+            const userIdForReset = row.querySelector('[data-action="reset-password"]').getAttribute('data-user-id') || userId;
+            window.location.href = `/registration/reset-password/${userId}/`;
+        }
+    }
+    else if (action === 'remove-user') {
+        if (confirm(`WARNING: Remove ${username} from registration module? They will lose all access.`)) {
+            window.location.href = `/registration/remove-user/${userId}/`;
+        }
+    }
+});
+</script>
+{% endblock %}

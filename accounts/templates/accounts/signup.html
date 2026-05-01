@@ -1,0 +1,83 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - School Management System</title>
+    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+</head>
+<body>
+
+    <div class="auth-container">
+
+        <div class="auth-header">
+            <h1>📝 Create Account</h1>
+            <p>Register to access school modules</p>
+        </div>
+
+        <div class="auth-body">
+
+            <!-- 🔔 SYSTEM MESSAGES -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="help-text" style="color: green;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- ⚠️ IMPORTANT NOTICE -->
+            <div class="help-text" style="margin-bottom:15px;">
+                ⚠️ Your account will require admin approval before you can login.
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                {% for field in form %}
+                <div class="form-group">
+
+                    <label>{{ field.label }}</label>
+
+                    {% if field.name == 'modules' %}
+                        <div class="checkbox-group">
+                            {{ field }}
+                        </div>
+                        <div class="help-text">
+                            Select the modules you want access to (e.g Academic, Discipline)
+                        </div>
+                    {% else %}
+                        {{ field }}
+                    {% endif %}
+
+                    {% if field.help_text %}
+                        <div class="help-text">{{ field.help_text }}</div>
+                    {% endif %}
+
+                    {% if field.errors %}
+                        <div class="help-text" style="color: #ef4444;">
+                            {% for error in field.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+                
+                <button type="submit" class="btn-submit">✅ Register</button>
+            </form>
+
+        </div>
+
+        <div class="auth-footer">
+            <p>Already have an account? 
+                <a href="{% url 'login' %}">Login here</a>
+            </p>
+        </div>
+
+    </div>
+
+</body>
+</html>

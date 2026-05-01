@@ -1,0 +1,159 @@
+{% extends 'discipline/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'discipline/css/all_cases.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="header-left">
+        <i class="fas fa-folder-open"></i>
+        <h2>All Discipline Cases</h2>
+    </div>
+
+    <div class="header-actions">
+        <a href="{% url 'discipline:all_cases_report' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" 
+           class="btn btn-success">
+            <i class="fas fa-download"></i> Download Report
+        </a>
+    </div>
+</div>
+<div style="margin-bottom:15px;">
+    <a href="{% url 'discipline:all_cases' %}" class="btn btn-secondary">Active</a>
+    <a href="{% url 'discipline:all_cases' %}?archived=1" class="btn btn-warning">Archived</a>
+</div>
+
+<form method="get" class="filters">
+    <input type="text" name="search" placeholder="Search..." value="{{ request.GET.search }}">
+    <select name="status">
+        <option value="">All</option>
+        <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
+    </select>
+
+    <select name="type">
+        <option value="">All</option>
+        <option value="minor" {% if request.GET.type == 'minor' %}selected{% endif %}>Minor</option>
+        <option value="major" {% if request.GET.type == 'major' %}selected{% endif %}>Major</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Filter</button>
+</form>
+
+<div class="table-card">
+<table class="table-cases">
+
+<thead>
+<tr>
+    <th>Student</th>
+    <th>Title</th>
+    <th>Type</th>
+    <th>Status</th>
+    <th>Date</th>
+    <th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+{% for case in page_obj %}
+<tr>
+
+<td>
+    <strong>{{ case.student.first_name }} {{ case.student.last_name }}</strong>
+    <div class="muted">{{ case.student.registration_number }}</div>
+</td>
+
+<td>{{ case.title|truncatechars:40 }}</td>
+
+<td>
+    <span class="badge {% if case.case_type == 'major' %}badge-major{% else %}badge-minor{% endif %}">
+        {{ case.get_case_type_display }}
+    </span>
+</td>
+
+<!-- 🔥 FIXED STATUS BLOCK -->
+<td>
+
+    <span class="badge {% if case.status == 'open' %}badge-open{% else %}badge-resolved{% endif %}">
+        {{ case.get_status_display }}
+    </span>
+
+    {% if case.suspension_id %}
+
+        {% if case.suspension.status == 'active' %}
+            <span class="badge badge-warning">Suspended</span>
+        {% endif %}
+
+        {% if case.suspension.status == 'completed' %}
+            <span class="badge badge-success">Completed</span>
+        {% endif %}
+
+        {% if case.suspension.is_overdue %}
+            <span class="badge badge-danger">Overdue</span>
+        {% endif %}
+
+        <div class="muted">
+            {{ case.suspension.start_date }} → {{ case.suspension.end_date }}
+            ({{ case.suspension.duration }} days)
+        </div>
+
+    {% endif %}
+
+</td>
+
+<td>{{ case.date_of_incident|date:"M d, Y" }}</td>
+
+<td class="actions">
+
+    {% if not case.is_archived %}
+
+        {% if case.status == 'open' %}
+        <form method="post" action="{% url 'discipline:resolve_case' case.id %}">
+            {% csrf_token %}
+            <button class="btn btn-success btn-sm">
+                <i class="fas fa-check"></i>
+            </button>
+        </form>
+        {% endif %}
+
+        <a href="{% url 'discipline:edit_case' case.id %}" class="btn btn-sm">
+            <i class="fas fa-edit"></i>
+        </a>
+
+        <form method="post" action="{% url 'discipline:archive_case' case.id %}">
+            {% csrf_token %}
+            <button class="btn btn-danger btn-sm">
+                <i class="fas fa-archive"></i>
+            </button>
+        </form>
+
+    {% else %}
+
+        <!-- 🔥 RESTORE BUTTON -->
+        <form method="post" action="{% url 'discipline:restore_case' case.id %}">
+            {% csrf_token %}
+            <button class="btn btn-warning btn-sm">
+                <i class="fas fa-rotate-left"></i>
+            </button>
+        </form>
+
+    {% endif %}
+
+</td>
+</tr>
+
+{% empty %}
+<tr>
+<td colspan="6" class="empty-state">
+    No discipline cases found
+</td>
+</tr>
+{% endfor %}
+</tbody>
+
+</table>
+</div>
+
+{% endblock %}

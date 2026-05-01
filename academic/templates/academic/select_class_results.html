@@ -1,0 +1,70 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width:600px; margin:auto; padding:25px;">
+
+    <h2 style="text-align:center; margin-bottom:20px;">
+        📊 View Class Results
+    </h2>
+
+    <form onsubmit="goToResults(event)">
+
+        <!-- ================= EXAM ================= -->
+        <div style="margin-bottom:15px;">
+            <label><strong>Select Exam:</strong></label>
+            <select id="exam" name="exam_id" required style="width:100%; padding:10px;">
+                <option value="">-- Select Exam --</option>
+
+                {% for exam in exams %}
+                    <option value="{{ exam.id }}">
+                        {{ exam.name }} ({{ exam.academic_year.year }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- ================= CLASS ================= -->
+        <div style="margin-bottom:20px;">
+            <label><strong>Select Class:</strong></label>
+            <select id="student_class" name="class" required style="width:100%; padding:10px;">
+                <option value="">-- Select Class --</option>
+
+                {% for c in classes %}
+                    <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- ================= BUTTON ================= -->
+        <div style="text-align:center;">
+            <button type="submit"
+                style="padding:10px 25px; background:#2c3e50; color:white; border:none; cursor:pointer;">
+                Load Results
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+
+<!-- ================= SCRIPT ================= -->
+<script>
+function goToResults(event) {
+    event.preventDefault();
+
+    const exam = document.getElementById("exam").value;
+    const cls = document.getElementById("student_class").value;
+
+    if (!exam || !cls) {
+        alert("⚠️ Please select both exam and class");
+        return;
+    }
+
+    // redirect to correct URL
+    window.location.href = `/academic/class-results/${exam}/${cls}/`;
+}
+</script>
+
+{% endblock %}

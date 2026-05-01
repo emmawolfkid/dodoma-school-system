@@ -1,0 +1,47 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Import Students{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/import.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="import-container">
+
+    <h2>📥 Import Students</h2>
+    <p>Upload Excel file to register multiple students</p>
+
+    <!-- MESSAGES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- DOWNLOAD TEMPLATE -->
+    <div class="template-box">
+        <h4>📄 Download Template</h4>
+        <p>Use the official format to avoid errors</p>
+        <a href="{% url 'download_import_template' %}" class="btn-download">
+            ⬇ Download Excel Template
+        </a>
+    </div>
+
+    <!-- UPLOAD FORM -->
+    <form method="post" enctype="multipart/form-data" class="upload-form">
+        {% csrf_token %}
+        
+        <label>Select Excel File (.xlsx)</label>
+        <input type="file" name="file" required>
+
+        <button type="submit">🚀 Upload & Import</button>
+    </form>
+
+</div>
+
+{% endblock %}

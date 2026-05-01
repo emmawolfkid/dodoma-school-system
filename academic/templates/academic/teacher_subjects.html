@@ -1,0 +1,80 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width: 1100px; margin: auto; padding: 20px;">
+
+    <h2 style="margin-bottom: 20px;">📘 My Assigned Subjects</h2>
+
+    {% if subjects %}
+
+    <!-- O-LEVEL -->
+    <h3 style="background:#4CAF50; color:white; padding:10px; border-radius:5px;">
+        🟢 O-Level Subjects
+    </h3>
+
+    <table border="1" cellpadding="10" width="100%" style="margin-bottom:20px;">
+        <tr style="background:#f5f5f5;">
+            <th>#</th>
+            <th>Subject</th>
+            <th>Class</th>
+            <th>Action</th>
+        </tr>
+
+        {% for s in subjects %}
+            {% if s.level == 'O' %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>📚 {{ s.subject.name }} ({{ s.subject.code }})</td>
+                <td>🎓 {{ s.student_class }}</td>
+                <td>
+                    <a href="{% url 'select_exam' s.subject.id s.student_class %}">
+                        ➡️ Enter Marks
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+
+
+    <!-- A-LEVEL -->
+    <h3 style="background:#2196F3; color:white; padding:10px; border-radius:5px;">
+        🔵 A-Level Subjects
+    </h3>
+
+    <table border="1" cellpadding="10" width="100%">
+        <tr style="background:#f5f5f5;">
+            <th>#</th>
+            <th>Subject</th>
+            <th>Class</th>
+            <th>Action</th>
+        </tr>
+
+        {% for s in subjects %}
+            {% if s.level == 'A' %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>📚 {{ s.subject.name }} ({{ s.subject.code }})</td>
+                <td>🎓 {{ s.student_class }}</td>
+                <td>
+                    <a href="{% url 'select_exam' s.subject.id s.student_class %}">
+                        ➡️ Enter Marks
+                    </a>
+                </td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+
+    {% else %}
+
+    <div style="padding:20px; background:#fff3cd; border-radius:6px;">
+        ⚠️ No subjects assigned yet. Contact academic admin.
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

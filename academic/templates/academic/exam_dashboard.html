@@ -1,0 +1,137 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width:1100px; margin:auto; padding:20px;">
+
+    <h2 style="margin-bottom:20px;">📝 Exam Management</h2>
+
+    <a href="{% url 'create_exam' %}" 
+       style="padding:8px 15px; background:#4CAF50; color:white; text-decoration:none; border-radius:4px;">
+        ➕ Create New Exam
+    </a>
+
+    <br><br>
+
+    <table border="1" cellpadding="10" style="width:100%; border-collapse:collapse;">
+        <thead style="background:#f5f5f5;">
+            <tr>
+                <th>Exam</th>
+                <th>Class</th>
+                <th>Level</th>
+                <th>Status</th>
+                <th>Lock</th>
+                <th>Results</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for exam in exams %}
+        <tr>
+
+            <!-- NAME -->
+            <td>
+                <strong>{{ exam.name }}</strong><br>
+                <small style="color:#666;">
+                    {{ exam.academic_year.year }}
+                </small>
+            </td>
+
+            <!-- CLASS -->
+            <td>
+                {% if exam.student_class == "all" %}
+                    All Classes
+                {% elif exam.student_class == "all_olevel" %}
+                    All O-Level
+                {% elif exam.student_class == "all_alevel" %}
+                    All A-Level
+                {% else %}
+                    {{ exam.student_class }}
+                {% endif %}
+            </td>
+
+            <!-- LEVEL -->
+            <td>
+                {% if exam.level == 'O' %}
+                    <span style="color:green;">O-Level</span>
+                {% else %}
+                    <span style="color:blue;">A-Level</span>
+                {% endif %}
+            </td>
+
+            <!-- STATUS -->
+            <td>
+                {% if exam.is_published %}
+                    📊 Published
+                {% else %}
+                    ⏳ Not Published
+                {% endif %}
+            </td>
+
+            <!-- LOCK -->
+            <td>
+                {% if exam.is_locked %}
+                    🔒 Locked
+                {% else %}
+                    🔓 Open
+                {% endif %}
+            </td>
+
+            <!-- RESULTS -->
+            <td>
+                <a href="{% url 'generate_results' exam.id %}">⚙️ Generate</a><br>
+
+                {% if not exam.is_published %}
+                    <a href="{% url 'publish_results' exam.id %}">📢 Publish</a>
+                {% else %}
+                    ✅ Published
+                {% endif %}
+            </td>
+
+            <!-- ACTIONS -->
+            <td>
+
+                <!-- LOCK -->
+                <a href="{% url 'toggle_lock_exam' exam.id %}">
+                    {% if exam.is_locked %}
+                        🔓 Unlock
+                    {% else %}
+                        🔒 Lock
+                    {% endif %}
+                </a>
+
+                <br>
+
+                <!-- VIEW RESULTS (FIXED) -->
+                {% if exam.student_class %}
+                    <a href="{% url 'class_results' exam.id exam.student_class %}">
+                        📋 View Results
+                    </a>
+                {% else %}
+                    <span style="color:gray;">Select class</span>
+                {% endif %}
+
+                <br>
+
+                <!-- EDIT -->
+                <a href="{% url 'edit_exam' exam.id %}">✏️ Edit</a>
+
+                <br>
+
+                <!-- DELETE -->
+                <a href="{% url 'delete_exam' exam.id %}"
+                   onclick="return confirm('Delete this exam?')"
+                   style="color:red;">
+                    🗑️ Delete
+                </a>                
+            </td>
+
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

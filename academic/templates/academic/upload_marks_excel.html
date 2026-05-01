@@ -1,0 +1,41 @@
+{% extends "academic/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<h2>Upload Marks via Excel</h2>
+
+<p><strong>Subject:</strong> {{ subject.name }}</p>
+<p><strong>Class:</strong> {{ student_class }}</p>
+<p><strong>Exam:</strong> {{ exam.name }}</p>
+
+<hr>
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <label>Select Excel File:</label><br>
+    <input type="file" name="file" required><br><br>
+
+    <button type="submit">Upload</button>
+</form>
+
+<hr>
+
+<h3>Format Instructions:</h3>
+
+{% if exam.level == "O" %}
+<pre>
+Reg No | Marks
+S001   | 67
+S002   | 54
+</pre>
+{% else %}
+<pre>
+Reg No | P1 | P2 | P3
+S001   | 70 | 65 | 40
+S002   | 60 | 55 | 35
+</pre>
+{% endif %}
+
+{% endblock %}

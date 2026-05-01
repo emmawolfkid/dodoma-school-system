@@ -1,0 +1,142 @@
+{% extends 'discipline/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'discipline/css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <i class="fas fa-chart-line"></i>
+    <h2>Discipline Dashboard</h2>
+</div>
+
+
+<!-- 📊 STATS -->
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <div class="stat-number">{{ total_cases }}</div>
+        <div class="stat-label">Total Cases</div>
+    </div>
+
+    <div class="stat-card stat-major">
+        <div class="stat-number">{{ major_cases }}</div>
+        <div class="stat-label">Major Cases</div>
+    </div>
+
+    <div class="stat-card stat-minor">
+        <div class="stat-number">{{ minor_cases }}</div>
+        <div class="stat-label">Minor Cases</div>
+    </div>
+
+    <div class="stat-card stat-open">
+        <div class="stat-number">{{ open_cases }}</div>
+        <div class="stat-label">Open Cases</div>
+    </div>
+
+    <div class="stat-card stat-resolved">
+        <div class="stat-number">{{ resolved_cases }}</div>
+        <div class="stat-label">Resolved Cases</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-number">{{ severity_total }}</div>
+        <div class="stat-label">Severity Points</div>
+    </div>
+
+    <!-- 🔥 NEW: ACTIVE SUSPENSIONS -->
+    <div class="stat-card stat-warning">
+        <div class="stat-number">{{ active_suspensions }}</div>
+        <div class="stat-label">Active Suspensions</div>
+    </div>
+
+</div>
+
+
+<!-- 📄 RECENT CASES -->
+<div class="card">
+
+    <div class="card-header">
+        <i class="fas fa-clock"></i>
+        <span>Recent Cases</span>
+    </div>
+
+    <div class="table-container">
+        <table class="table-dashboard">
+
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for case in recent_cases %}
+                <tr>
+
+                    <td>
+                        <strong>{{ case.student.first_name }} {{ case.student.last_name }}</strong>
+                        <div class="muted">{{ case.student.registration_number }}</div>
+                    </td>
+
+                    <td>{{ case.title|truncatechars:30 }}</td>
+
+                    <td>
+                        <span class="badge {% if case.case_type == 'major' %}badge-major{% else %}badge-minor{% endif %}">
+                            {{ case.get_case_type_display }}
+                        </span>
+                    </td>
+
+                    <!-- 🔥 STATUS + SUSPENSION -->
+                    <td>
+
+                        <!-- CASE STATUS -->
+                        <span class="badge {% if case.status == 'open' %}badge-open{% else %}badge-resolved{% endif %}">
+                            {{ case.get_status_display }}
+                        </span>
+
+                        <!-- SUSPENSION -->
+                        {% if case.suspension %}
+
+                            {% if case.suspension.status == 'active' %}
+                                <span class="badge badge-warning">Suspended</span>
+                            {% endif %}
+
+                            {% if case.suspension.status == 'completed' %}
+                                <span class="badge badge-success">Completed</span>
+                            {% endif %}
+
+                            {% if case.suspension.is_overdue %}
+                                <span class="badge badge-danger">Overdue</span>
+                            {% endif %}
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>{{ case.date_reported|date:"M d, Y" }}</td>
+
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No recent discipline cases</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

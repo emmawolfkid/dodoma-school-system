@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - School Management System</title>
+    <link rel="stylesheet" href="{% static 'accounts/css/dashboard.css' %}">
+</head>
+<body>
+
+<div class="dashboard-container">
+
+    <!-- HEADER -->
+    <div class="dashboard-header">
+        <div class="welcome-section">
+            <h1>👋 Welcome, {{ request.user.username }}!</h1>
+            <p>Select a module to get started</p>
+
+            <!-- 🔥 USER STATUS -->
+            <small>
+                {% if request.user.is_superuser %}
+                    🛡️ System Admin
+                {% else %}
+                    👤 User
+                {% endif %}
+            </small>
+        </div>
+
+        <div>
+            <a href="{% url 'logout' %}" class="logout-btn">🚪 Logout</a>
+        </div>
+    </div>
+
+    <!-- MESSAGES -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- MODULE GRID -->
+    <div class="modules-grid">
+
+        {% if is_superuser %}
+
+            {% for module in modules %}
+                <a href="/{{ module.name }}/" class="module-card">
+
+                    <div class="module-icon">
+                        {% if module.name == 'registration' %}📚
+                        {% elif module.name == 'academic' %}📖
+                        {% elif module.name == 'discipline' %}⚖️
+                        {% elif module.name == 'certificate' %}📜
+                        {% elif module.name == 'audit' %}🔍
+                        {% else %}📦
+                        {% endif %}
+                    </div>
+
+                    <div class="module-info">
+                        <h3 class="module-name">{{ module.name|title }}</h3>
+
+                        <p class="module-desc">
+                            {% if module.name == 'academic' %}
+                                Manage exams, results, and performance
+                            {% else %}
+                                Access {{ module.name }} module
+                            {% endif %}
+                        </p>
+
+                        <!-- 🔥 QUICK ACTION -->
+                        <small>➡ Click to open {{ module.name|title }}</small>
+                    </div>
+
+                </a>
+            {% endfor %}
+
+        {% else %}
+
+            {% for user_module in user_modules %}
+                <a href="/{{ user_module.module.name }}/dashboard/" class="module-card">
+
+                    <div class="module-icon">
+                        {% if user_module.module.name == 'registration' %}📚
+                        {% elif user_module.module.name == 'academic' %}📖
+                        {% elif user_module.module.name == 'discipline' %}⚖️
+                        {% elif user_module.module.name == 'certificate' %}📜
+                        {% elif user_module.module.name == 'audit' %}🔍
+                        {% else %}📦
+                        {% endif %}
+                    </div>
+
+                    <div class="module-info">
+
+                        <h3 class="module-name">
+                            {{ user_module.module.name|title }}
+
+                            {% if user_module.is_admin %}
+                                <span style="color: gold;">(Admin)</span>
+                            {% endif %}
+                        </h3>
+
+                        <p class="module-desc">
+                            {% if user_module.module.name == 'academic' %}
+                                Enter marks, manage results
+                            {% else %}
+                                Access {{ user_module.module.name }} module
+                            {% endif %}
+                        </p>
+
+                        <!-- 🔥 PERMISSION BADGES -->
+                        <small>
+                            {% if user_module.can_add %}➕ Add {% endif %}
+                            {% if user_module.can_edit %}✏️ Edit {% endif %}
+                            {% if user_module.can_delete %}🗑 Delete {% endif %}
+                            {% if user_module.can_view %}👁 View {% endif %}
+                        </small>
+
+                    </div>
+
+                </a>
+            {% empty %}
+                <div class="empty-state">
+                    <div class="empty-icon">⏳</div>
+                    <h3>No Approved Modules Yet</h3>
+                    <p>Your module requests are pending approval</p>
+                </div>
+            {% endfor %}
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+</body>
+</html>

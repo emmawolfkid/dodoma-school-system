@@ -1,0 +1,54 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<h2>👥 Academic Users</h2>
+
+<table border="1" cellpadding="10">
+<tr>
+    <th>Username</th>
+    <th>Status</th>
+    <th>Role</th>
+    <th>Actions</th>
+</tr>
+
+{% for um in user_modules %}
+<tr>
+    <td>{{ um.user.username }}</td>
+
+    <td>
+        {% if um.is_approved %}
+            ✅ Approved
+        {% else %}
+            ⏳ Pending
+        {% endif %}
+    </td>
+
+    <td>
+        {% if um.is_admin %}
+            👑 Admin
+        {% elif um.is_exam_coordinator %}
+            🧠 Coordinator
+        {% else %}
+            👨‍🏫 Teacher
+        {% endif %}
+    </td>
+
+    <td>
+        {% if not um.is_approved %}
+            <a href="{% url 'approve_academic_user' um.user.id %}">
+                ✅ Appro
+            </a>
+        {% endif %}
+
+        |
+        <a href="{% url 'assign_subjects' um.user.id %}">
+            📚 Assign
+        </a>
+    </td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

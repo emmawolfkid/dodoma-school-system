@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>School System</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 230px;
+            height: 100vh;
+            background: #2c3e50;
+            color: white;
+            position: fixed;
+            padding: 20px;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 20px;
+        }
+
+        .sidebar a {
+            display: block;
+            color: #ecf0f1;
+            text-decoration: none;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .sidebar a:hover {
+            background: #34495e;
+        }
+
+        /* CONTENT */
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        /* HEADER */
+        .topbar {
+            background: white;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ALERTS */
+        .alert {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .alert-success { background: #2ecc71; color: white; }
+        .alert-error { background: #e74c3c; color: white; }
+        .alert-warning { background: #f39c12; color: white; }
+
+        /* POPUP */
+        .popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: black;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* BADGE */
+        .badge {
+            background: red;
+            padding: 3px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+    <h3>📚 Menu</h3>
+
+    <!-- DASHBOARD -->
+    <a href="{% url 'academic_dashboard' %}">🏠 Dashboard</a>
+
+    <!-- SUPERUSER LINKS -->
+    {% if request.user.is_superuser %}
+        <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
+        <a href="{% url 'academic_users' %}">👥 Manage Users</a>
+        <a href="{% url 'approve_subject_requests' %}">
+            📋 Subject Requests
+            {% if pending_requests > 0 %}
+                <span class="badge">{{ pending_requests }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'manage_teacher_subjects' %}">👥 Teacher-Subject Management</a>
+        <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
+    {% endif %}
+
+    <!-- ACADEMIC ADMIN LINKS -->
+    {% for m in request.user.usermodel_set.all %}
+        {% if m.module.name == 'academic' and m.is_admin %}
+            <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
+            <a href="{% url 'academic_users' %}">👥 Manage Users</a>
+            <a href="{% url 'approve_subject_requests' %}">
+                📋 Subject Requests
+                {% if pending_requests > 0 %}
+                    <span class="badge">{{ pending_requests }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'manage_teacher_subjects' %}">👥 Teacher-Subject Management</a>
+            <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
+        {% endif %}
+    {% endfor %}
+
+    <!-- EXAM COORDINATOR LINKS -->
+    {% for m in request.user.usermodel_set.all %}
+        {% if m.module.name == 'academic' and m.is_exam_coordinator %}
+            <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
+            <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
+        {% endif %}
+    {% endfor %}
+
+    <!-- TEACHER LINKS (For ALL users who are teachers) -->
+    <a href="{% url 'teacher_subjects' %}">📘 My Subjects</a>
+    <a href="{% url 'select_subjects' %}">➕ Request Subjects</a>
+    <a href="{% url 'manage_my_subjects' %}">⚙️ Manage My Subjects</a>
+    <a href="{% url 'class_results_view' %}">📊 Class Results</a>
+
+    <hr>
+
+    <!-- LOGOUT -->
+    <a href="{% url 'logout' %}">🚪 Logout</a>
+
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div>
+            👤 {{ request.user.username }}
+        </div>
+
+        <div>
+            🔔 {{ notifications|length }} Notifications
+        </div>
+    </div>
+
+    <!-- ALERTS -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- MAIN CONTENT -->
+    {% block content %}{% endblock %}
+
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup"></div>
+
+<script>
+function showPopup(msg){
+    let p = document.getElementById('popup');
+    p.innerText = msg;
+    p.style.display='block';
+    setTimeout(()=>p.style.display='none',3000);
+}
+</script>
+
+</body>
+</html>

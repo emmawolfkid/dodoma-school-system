@@ -1,0 +1,329 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+
+{% block title %}Import Students{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/import.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <div class="page-header">
+        <div class="header-left">
+            <h1 class="page-title">📥 Import Students from Excel</h1>
+            <p class="page-description">Bulk upload student data using an Excel file</p>
+        </div>
+        <div class="header-right">
+            <a href="{% url 'view_students' %}" class="btn btn-secondary">
+                ← Back to Students
+            </a>
+        </div>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📋 Instructions & Requirements</h2>
+        </div>
+        <div class="card-body">
+            <h3>✅ Required Columns</h3>
+            <ul class="instruction-list required-list">
+                <li><strong>Registration Number</strong> - Must be unique (duplicates will be skipped)</li>
+                <li><strong>First Name</strong> - Student's first name</li>
+                <li><strong>Middle Name</strong> - Student's middle name</li>
+                <li><strong>Last Name</strong> - Student's last name</li>
+                <li><strong>Gender</strong> - Male/Female/Other</li>
+                <li><strong>Date of Birth</strong> - Format: YYYY-MM-DD (e.g., 2005-01-15)</li>
+                <li><strong>Class</strong> - Form 1, Form 2, Form 3, Form 4, Form 5, Form 6</li>
+                <li><strong>Section</strong> - Class section (A, B, C, etc.)</li>
+                <li><strong>Parent Name</strong> - Parent or guardian full name</li>
+                <li><strong>Parent Phone</strong> - Parent contact number</li>
+            </ul>
+
+            <h3>📝 Optional Fields</h3>
+            <ul class="instruction-list optional-list">
+                <li><strong>Date of Admission</strong> - When student joined the school</li>
+                <li><strong>Region</strong> - Student's home region</li>
+                <li><strong>District</strong> - Student's home district</li>
+                <li><strong>Ward</strong> - Student's home ward</li>
+                <li><strong>Village</strong> - Student's home village</li>
+                <li><strong>Division</strong> - Academic division</li>
+                <li><strong>Tribe</strong> - Student's tribe/ethnicity</li>
+                <li><strong>Last School Attended</strong> - Previous school</li>
+                <li><strong>Parent Phone 2</strong> - Alternative parent contact</li>
+                <li><strong>Nearby Person Phone</strong> - Emergency contact</li>
+                <li><strong>Health Status</strong> - Any health conditions</li>
+                <li><strong>School Status</strong> - Active/Graduated/Transferred</li>
+            </ul>
+
+            <div class="alert alert-info">
+                <strong>💡 Pro Tips:</strong>
+                <ul>
+                    <li>Download the template below for the correct format</li>
+                    <li>First row must contain column headers exactly as shown above</li>
+                    <li>Registration numbers must be unique - duplicates will be automatically skipped</li>
+                    <li>Keep date format consistent throughout the file</li>
+                    <li>Maximum file size: 10MB</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📤 Upload Excel File</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" action="{% url 'import_students' %}" id="uploadForm">
+                {% csrf_token %}
+                
+                <!-- File Selection Area -->
+                <div class="file-selection-area">
+                    <label class="file-label" for="fileInput">
+                        <div class="file-input-icon">📂</div>
+                        <div class="file-input-text">Choose Excel File</div>
+                        <div class="file-input-hint">Click to browse or drag & drop</div>
+                        <input type="file" name="excel_file" id="fileInput" accept=".xlsx,.xls" required>
+                    </label>
+                    <div id="fileInfo" class="file-info" style="display: none;">
+                        <span id="fileName"></span>
+                        <span id="fileSize"></span>
+                        <button type="button" id="clearFileBtn" class="clear-btn">✖</button>
+                    </div>
+                </div>
+
+                <!-- Submit Button Area -->
+                <div class="submit-area">
+                    <button type="submit" class="btn btn-primary btn-import" id="submitBtn">
+                        📥 Import Students
+                    </button>
+                    <p class="submit-hint" id="submitHint">Please select a file first</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Download Template Card -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📎 Need a Template?</h2>
+        </div>
+        <div class="card-body">
+            <p>Download our pre-formatted Excel template with all required columns and example data.</p>
+            <a href="{% url 'download_import_template' %}" class="btn btn-secondary">
+                📋 Download Excel Template
+            </a>
+        </div>
+    </div>
+
+    <!-- Sample Preview Card -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">👀 Sample Data Preview</h2>
+        </div>
+        <div class="card-body">
+            <div class="table-wrapper">
+                <table class="sample-table">
+                    <thead>
+                        <tr>
+                            <th>Registration Number</th>
+                            <th>First Name</th>
+                            <th>Class</th>
+                            <th>Parent Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>REG2024001</td>
+                            <td>John</td>
+                            <td>Form 4</td>
+                            <td>0712345678</td>
+                        </tr>
+                        <tr>
+                            <td>REG2024002</td>
+                            <td>Jane</td>
+                            <td>Form 3</td>
+                            <td>0723456789</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Wait for DOM to load
+document.addEventListener('DOMContentLoaded', function() {
+    // Get elements
+    const fileInput = document.getElementById('fileInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const clearFileBtn = document.getElementById('clearFileBtn');
+    const submitHint = document.getElementById('submitHint');
+    const fileLabel = document.querySelector('.file-label');
+
+    // Enable/disable submit button based on file selection
+    function updateSubmitButton() {
+        if (fileInput && fileInput.files.length > 0) {
+            submitBtn.disabled = false;
+            if (submitHint) {
+                submitHint.textContent = '✓ Ready to import';
+                submitHint.style.color = '#10b981';
+            }
+        } else {
+            submitBtn.disabled = true;
+            if (submitHint) {
+                submitHint.textContent = 'Please select a file first';
+                submitHint.style.color = '#9ca3af';
+            }
+        }
+    }
+
+    // Display file information
+    function displayFileInfo(file) {
+        const name = file.name;
+        const size = (file.size / 1024 / 1024).toFixed(2);
+        
+        if (fileName) fileName.textContent = name;
+        if (fileSize) fileSize.textContent = size + ' MB';
+        if (fileInfo) fileInfo.style.display = 'flex';
+        
+        updateSubmitButton();
+    }
+
+    // Clear file selection
+    function clearFile() {
+        if (fileInput) fileInput.value = '';
+        if (fileInfo) fileInfo.style.display = 'none';
+        updateSubmitButton();
+    }
+
+    // Handle file selection
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileName_lower = file.name.toLowerCase();
+                const fileExt = fileName_lower.split('.').pop();
+                
+                if (fileExt === 'xlsx' || fileExt === 'xls') {
+                    displayFileInfo(file);
+                } else {
+                    alert('Please select an Excel file (.xlsx or .xls)');
+                    fileInput.value = '';
+                    updateSubmitButton();
+                }
+            } else {
+                clearFile();
+            }
+        });
+    }
+
+    // Clear button handler
+    if (clearFileBtn) {
+        clearFileBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            clearFile();
+        });
+    }
+
+    // Drag and drop functionality
+    if (fileLabel) {
+        fileLabel.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.style.borderColor = '#4f46e5';
+            this.style.background = '#e0e7ff';
+        });
+
+        fileLabel.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.style.borderColor = '#d1d5db';
+            this.style.background = '#f9fafb';
+        });
+
+        fileLabel.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.style.borderColor = '#d1d5db';
+            this.style.background = '#f9fafb';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const fileName_lower = file.name.toLowerCase();
+                const fileExt = fileName_lower.split('.').pop();
+                
+                if (fileExt === 'xlsx' || fileExt === 'xls') {
+                    fileInput.files = files;
+                    displayFileInfo(file);
+                } else {
+                    alert('Please upload an Excel file (.xlsx or .xls)');
+                }
+            }
+        });
+    }
+
+    // Form submission handler
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            if (!fileInput || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select a file to upload');
+                return false;
+            }
+            
+            const file = fileInput.files[0];
+            const fileName_lower = file.name.toLowerCase();
+            const fileExt = fileName_lower.split('.').pop();
+            
+            if (fileExt !== 'xlsx' && fileExt !== 'xls') {
+                e.preventDefault();
+                alert('Please upload an Excel file (.xlsx or .xls)');
+                return false;
+            }
+            
+            // Disable submit button and show loading
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '⏳ Importing... Please wait';
+            }
+            
+            // Show loading message
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-message';
+            loadingDiv.innerHTML = '📊 Processing your file... This may take a few moments.';
+            loadingDiv.style.marginTop = '1rem';
+            loadingDiv.style.padding = '0.75rem';
+            loadingDiv.style.background = '#e0e7ff';
+            loadingDiv.style.borderRadius = '8px';
+            loadingDiv.style.textAlign = 'center';
+            
+            const existingLoading = document.querySelector('.loading-message');
+            if (existingLoading) {
+                existingLoading.remove();
+            }
+            
+            const submitArea = document.querySelector('.submit-area');
+            if (submitArea) {
+                submitArea.appendChild(loadingDiv);
+            }
+            
+            return true;
+        });
+    }
+
+    // Initialize
+    updateSubmitButton();
+});
+</script>
+{% endblock %}

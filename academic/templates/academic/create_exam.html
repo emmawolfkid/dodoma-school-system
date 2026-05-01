@@ -1,0 +1,152 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 600px; margin: 50px auto;">
+
+    <div class="card">
+
+        <div class="card-header" style="background:#4CAF50; color:white; padding:15px;">
+            <h3>{% if exam %}✏️ Edit Exam{% else %}📝 Create Exam{% endif %}</h3>
+        </div>
+
+        <div class="card-body" style="padding:20px;">
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <!-- NAME -->
+                <div style="margin-bottom:15px;">
+                    <label><strong>Exam Name</strong></label>
+                    <input type="text" name="name"
+                        value="{{ exam.name|default:'' }}"
+                        required
+                        style="width:100%; padding:8px;">
+                </div>
+
+                <!-- TERM -->
+                <div style="margin-bottom:15px;">
+                    <label><strong>Term</strong></label>
+                    <select name="term" required style="width:100%; padding:8px;">
+                        <option value="">-- Select --</option>
+                        {% for value, label in terms %}
+                        <option value="{{ value }}"
+                            {% if exam and exam.term == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- LEVEL -->
+                <div style="margin-bottom:15px;">
+                    <label><strong>Level</strong></label>
+                    <select name="level" id="level" required style="width:100%; padding:8px;">
+                        <option value="">-- Select Level --</option>
+                        <option value="O" {% if exam and exam.level == 'O' %}selected{% endif %}>
+                            O-Level (Form 1–4)
+                        </option>
+                        <option value="A" {% if exam and exam.level == 'A' %}selected{% endif %}>
+                            A-Level (Form 5–6)
+                        </option>
+                    </select>
+                </div>
+
+                <!-- CLASS -->
+                <div style="margin-bottom:15px;">
+                    <label><strong>Target Class</strong></label>
+                    <select name="student_class" id="class-select" style="width:100%; padding:8px;">
+                        <option value="">-- Select --</option>
+
+                        <!-- GROUP -->
+                        <option value="all" {% if exam and exam.student_class == 'all' %}selected{% endif %}>
+                            📚 All Classes
+                        </option>
+
+                        <option value="all_olevel" {% if exam and exam.student_class == 'all_olevel' %}selected{% endif %}>
+                            📘 All O-Level
+                        </option>
+
+                        <option value="all_alevel" {% if exam and exam.student_class == 'all_alevel' %}selected{% endif %}>
+                            📗 All A-Level
+                        </option>
+
+                        <option disabled>────────────</option>
+
+                        {% for c in "Form 1,Form 2,Form 3,Form 4,Form 5,Form 6".split(",") %}
+                        <option value="{{ c }}"
+                            {% if exam and exam.student_class == c %}selected{% endif %}>
+                            {{ c }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <small id="classHint"></small>
+                </div>
+
+                <!-- YEAR -->
+                <div style="margin-bottom:15px;">
+                    <label><strong>Academic Year</strong></label>
+                    <select name="year" required style="width:100%; padding:8px;">
+                        {% for year in years %}
+                        <option value="{{ year.id }}"
+                            {% if exam and exam.academic_year.id == year.id %}selected{% endif %}>
+                            {{ year.year }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- BUTTONS -->
+                <button type="submit"
+                    style="padding:10px 20px; background:#4CAF50; color:white;">
+                    {% if exam %}Update{% else %}Create{% endif %}
+                </button>
+
+                <a href="{% url 'exam_dashboard' %}" style="margin-left:10px;">
+                    Cancel
+                </a>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const level = document.getElementById("level");
+const classSelect = document.getElementById("class-select");
+const hint = document.getElementById("classHint");
+
+function filterClasses() {
+    const val = level.value;
+
+    for (let opt of classSelect.options) {
+        opt.disabled = false;
+    }
+
+    if (val === "O") {
+        for (let opt of classSelect.options) {
+            if (opt.value.includes("Form 5") || opt.value.includes("Form 6") || opt.value === "all_alevel") {
+                opt.disabled = true;
+            }
+        }
+        hint.innerText = "O-Level → Form 1–4 only";
+    }
+
+    if (val === "A") {
+        for (let opt of classSelect.options) {
+            if (opt.value.includes("Form 1") || opt.value.includes("Form 2") ||
+                opt.value.includes("Form 3") || opt.value.includes("Form 4") ||
+                opt.value === "all_olevel") {
+                opt.disabled = true;
+            }
+        }
+        hint.innerText = "A-Level → Form 5–6 only";
+    }
+}
+
+level.addEventListener("change", filterClasses);
+filterClasses();
+</script>
+
+{% endblock %}

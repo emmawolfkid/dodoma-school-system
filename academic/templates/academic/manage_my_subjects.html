@@ -1,0 +1,84 @@
+{% extends "academic/base.html" %}
+
+{% block content %}
+
+<div style="max-width: 900px; margin:auto; padding:20px;">
+
+<h2>📘 My Assigned Subjects</h2>
+
+{% if subjects %}
+
+<table style="width:100%; border-collapse:collapse;">
+
+<tr style="background:#4CAF50; color:white;">
+    <th>#</th>
+    <th>Subject</th>
+    <th>Class</th>
+    <th>Level</th>
+    <th>Action</th>
+</tr>
+
+{% for s in subjects %}
+<tr>
+    <td>{{ forloop.counter }}</td>
+
+    <td>
+        <strong>{{ s.subject.name }}</strong><br>
+        <small>{{ s.subject.code }}</small>
+    </td>
+
+    <td>{{ s.student_class }}</td>
+
+    <td>
+        {% if s.level == 'O' %}
+            <span style="color:green;">O-Level</span>
+        {% else %}
+            <span style="color:blue;">A-Level</span>
+        {% endif %}
+    </td>
+
+    <td>
+        <a href="{% url 'remove_subject' s.id %}"
+           onclick="return confirm('Remove {{ s.subject.name }} from {{ s.student_class }}?')"
+           style="color:red;">
+           ❌ Remove
+        </a>
+    </td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% else %}
+
+<div style="padding:20px; background:#fff3cd; border-radius:5px;">
+    ⚠️ You have no assigned subjects.<br>
+    👉 Request subjects from admin.
+</div>
+
+{% endif %}
+
+<br>
+
+<div style="display:flex; gap:10px;">
+    <a href="{% url 'teacher_subjects' %}" 
+       style="padding:10px 15px; background:#4CAF50; color:white; text-decoration:none;">
+       📘 Go to My Subjects
+    </a>
+
+    <a href="{% url 'academic_dashboard' %}" 
+       style="padding:10px 15px; background:#6c757d; color:white; text-decoration:none;">
+       🏠 Dashboard
+    </a>
+</div>
+
+</div>
+
+<style>
+table th, table td {
+    padding:10px;
+    border-bottom:1px solid #ddd;
+}
+</style>
+
+{% endblock %}
