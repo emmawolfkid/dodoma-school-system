@@ -1,0 +1,154 @@
+{% extends 'certificate/base.html' %}
+
+{% block title %}Graduates{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-heading">
+        <div>
+            <h1>Graduates List</h1>
+            <p>Filter by Form 4/Form 6 and year, record received documents, and verify collection.</p>
+        </div>
+        <a href="{% url 'certificate:certificate_dashboard' %}" class="btn ghost">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+    </div>
+
+    <form method="GET" class="filter-card">
+        <div class="filter-grid">
+            <div class="span-2">
+                <label class="form-label">Year</label>
+                <select name="year" class="form-select" onchange="this.form.submit()">
+                    <option value="">All years</option>
+                    {% for yr in available_years %}
+                        <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="span-2">
+                <label class="form-label">Level</label>
+                <select name="level" class="form-select" onchange="this.form.submit()">
+                    <option value="">All levels</option>
+                    <option value="Form 4" {% if selected_level == 'Form 4' %}selected{% endif %}>Form 4</option>
+                    <option value="Form 6" {% if selected_level == 'Form 6' %}selected{% endif %}>Form 6</option>
+                </select>
+            </div>
+            <div class="span-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All collection statuses</option>
+                    <option value="available" {% if selected_status == 'available' %}selected{% endif %}>Documents at school</option>
+                    <option value="none" {% if selected_status == 'none' %}selected{% endif %}>Not collected</option>
+                    <option value="cert" {% if selected_status == 'cert' %}selected{% endif %}>Certificate only collected</option>
+                    <option value="result" {% if selected_status == 'result' %}selected{% endif %}>Result slip only collected</option>
+                    <option value="both" {% if selected_status == 'both' %}selected{% endif %}>Both collected</option>
+                </select>
+            </div>
+            <div class="span-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Name or registration number" value="{{ search_query }}">
+            </div>
+            <div class="span-2">
+                <button type="submit" class="btn" style="width:100%;">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Graduate</th>
+                    <th>Group</th>
+                    <th>Received at School</th>
+                    <th>Collection</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in page_obj %}
+                <tr>
+                    <td>
+                        <strong>{{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</strong>
+                        <div class="muted">{{ student.registration_number }}</div>
+                    </td>
+                    <td>{{ student.graduation_label }}</td>
+                    <td>
+                        {% with collection=student.collection_record %}
+                            {% if collection %}
+                                <span class="badge {% if collection.certificate_available %}success{% elif collection.certificate_unavailable_reason %}warning{% else %}muted{% endif %}">
+                                    Cert
+                                </span>
+                                <span class="badge {% if collection.result_slip_available %}success{% elif collection.result_slip_unavailable_reason %}warning{% else %}muted{% endif %}">
+                                    Slip
+                                </span>
+                                {% if collection.certificate_unavailable_reason %}
+                                    <div class="muted">Cert: {{ collection.certificate_unavailable_reason }}</div>
+                                {% endif %}
+                                {% if collection.result_slip_unavailable_reason %}
+                                    <div class="muted">Slip: {{ collection.result_slip_unavailable_reason }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge muted">Not recorded</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% with collection=student.collection_record %}
+                            {% if collection %}
+                                <span class="badge {% if collection.certificate_collected %}success{% else %}muted{% endif %}">Cert</span>
+                                <span class="badge {% if collection.result_slip_collected %}success{% else %}muted{% endif %}">Slip</span>
+                                {% if collection.date_issued %}
+                                    <div class="muted">Last issued: {{ collection.date_issued|date:"M d, Y H:i" }}</div>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge danger">Not collected</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        <div class="button-group">
+                            <a href="{% url 'certificate:update_necta_details' student.id %}" class="btn btn-sm">
+                                <i class="fas fa-pen"></i> Receive
+                            </a>
+                            <a href="{% url 'certificate:student_full_history' student.id %}" class="btn ghost btn-sm">
+                                <i class="fas fa-clock-rotate-left"></i> History
+                            </a>
+                            <a href="{% url 'certificate:generate_collection_receipt' student.id %}" class="btn ghost btn-sm">
+                                <i class="fas fa-print"></i> Receipt
+                            </a>
+                            <form method="post" action="{% url 'certificate:mark_collection' student.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="type" value="cert">
+                                <button class="btn success btn-sm" type="submit">Cert Collected</button>
+                            </form>
+                            <form method="post" action="{% url 'certificate:mark_collection' student.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="type" value="result">
+                                <button class="btn success btn-sm" type="submit">Slip Collected</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="muted">No graduates found for this filter.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&year={{ selected_year|default_if_none:'' }}&level={{ selected_level|default_if_none:'' }}&status={{ selected_status|default_if_none:'' }}&search={{ search_query|default_if_none:'' }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&year={{ selected_year|default_if_none:'' }}&level={{ selected_level|default_if_none:'' }}&status={{ selected_status|default_if_none:'' }}&search={{ search_query|default_if_none:'' }}">Next</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

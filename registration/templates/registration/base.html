@@ -4,85 +4,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}School Management{% endblock %}</title>
-    
-    <!-- Link to the Base CSS -->
-    <link rel="stylesheet" href="{% static 'registration/css/base.css' %}">
-    
+    <title>{% block title %}Registration{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'registration/css/base.css' %}?v=2">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-    <!-- SIDEBAR: Fixed on the left -->
-    <aside class="sidebar">
-        <div class="brand-section">
-            <div class="brand-logo">📚 Registration</div>
-            <span class="brand-subtext">School Management</span>
+<aside class="sidebar">
+    <div class="brand-section">
+        <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="brand-image">
+        <div>
+            <div class="brand-logo">Registration</div>
+            <span class="brand-subtext">Student Records</span>
         </div>
+    </div>
 
-        <nav class="nav-menu">
-            <!-- 1. Dashboard -->
-            <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <span class="nav-icon">🏠</span> Dashboard
-            </a>
+    <nav class="nav-menu">
+        <a href="{% url 'dashboard' %}" class="nav-item">
+            <span class="nav-icon">Home</span> Main Dashboard
+        </a>
+        <a href="{% url 'view_students' %}" class="nav-item {% if request.resolver_match.url_name == 'view_students' %}active{% endif %}">
+            <span class="nav-icon">List</span> Students
+        </a>
+        <a href="{% url 'register_student' %}" class="nav-item {% if request.resolver_match.url_name == 'register_student' %}active{% endif %}">
+            <span class="nav-icon">Add</span> Register
+        </a>
+        <a href="{% url 'import_students' %}" class="nav-item {% if request.resolver_match.url_name == 'import_students' %}active{% endif %}">
+            <span class="nav-icon">XLS</span> Import Excel
+        </a>
+        <a href="{% url 'promote_students' %}" class="nav-item {% if request.resolver_match.url_name == 'promote_students' %}active{% endif %}">
+            <span class="nav-icon">Next</span> Promote
+        </a>
+        <a href="{% url 'download_students_pdf' %}" class="nav-item">
+            <span class="nav-icon">PDF</span> Download
+        </a>
+        <a href="{% url 'logout' %}" class="nav-item logout-item">
+            <span class="nav-icon">Out</span> Logout
+        </a>
+    </nav>
 
-            <!-- 2. View Students -->
-            <a href="{% url 'view_students' %}" class="nav-item {% if request.resolver_match.url_name == 'view_students' %}active{% endif %}">
-                <span class="nav-icon">👨‍🎓</span> Students
-            </a>
+    <div class="sidebar-footer">
+        <div class="user-avatar">{{ request.user.username|slice:":1"|upper }}</div>
+        <div class="user-info">
+            <span class="username">{{ request.user.username }}</span>
+        </div>
+    </div>
+</aside>
 
-            <!-- 3. Register New Student -->
-            <a href="{% url 'register_student' %}" class="nav-item {% if request.resolver_match.url_name == 'register_student' %}active{% endif %}">
-                <span class="nav-icon">➕</span> Register
-            </a>
-
-           <!-- In the sidebar nav-menu section, update the Import link -->
-         {% if perms.registration.can_add or request.user.is_superuser or user_can_add %}
-           <a href="{% url 'import_students' %}" class="nav-item {% if request.resolver_match.url_name == 'import_students' %}active{% endif %}">
-            <span class="nav-icon">📥</span> Import Excel
-             </a>
+<main class="main-wrapper">
+    <div class="content-container">
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
         {% endif %}
 
-            <!-- 5. Download Section -->
-            <a href="{% url 'download_students_pdf' %}" class="nav-item">
-                <span class="nav-icon">📄</span> Download PDF
-            </a>
+        {% block content %}{% endblock %}
+    </div>
+</main>
 
-            <!-- 6. Logout -->
-            <a href="{% url 'logout' %}" class="nav-item logout-item">
-                <span class="nav-icon">🚪</span> Logout
-            </a>
-        </nav>
-
-        <!-- User Info at the Bottom -->
-        <div class="sidebar-footer">
-            <div class="user-avatar">{{ request.user.username|slice:":1"|upper }}</div>
-            <div class="user-info">
-                <span class="username">{{ request.user.username }}</span>
-            </div>
-        </div>
-    </aside>
-
-    <!-- MAIN CONTENT AREA -->
-    <main class="main-wrapper">
-        <div class="content-container">
-            
-            <!-- Django Messages (Success/Error Alerts) -->
-            {% if messages %}
-                <div class="messages-container">
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <!-- Page Content from other templates -->
-            {% block content %}{% endblock %}
-            
-        </div>
-    </main>
-
+{% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -9,7 +9,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">👨‍🎓 Student Profile</h1>
+    <h1 class="page-title">ðŸ‘¨â€ðŸŽ“ Student Profile</h1>
     <p class="page-description">Complete student information</p>
 </div>
 
@@ -70,7 +70,10 @@
     </div>
     
     <div class="action-buttons">
-        <a href="{% url 'view_students' %}" class="btn-back">← Back to Students</a>
+        {% if can_edit_students %}
+            <a href="{% url 'edit_student' student.id %}" class="btn-back">Edit Student</a>
+        {% endif %}
+        <a href="{% url 'view_students' %}" class="btn-back">â† Back to Students</a>
     </div>
 </div>
 {% endblock %}

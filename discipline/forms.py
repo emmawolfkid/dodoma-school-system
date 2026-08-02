@@ -89,12 +89,17 @@ class SuspensionForm(forms.ModelForm):
 
     def validate_for_suspension(self):
         """Call this method when suspension is required"""
+        # is_valid() runs full_clean() and populates cleaned_data — required
+        # before it can be read below (calling it again after add_error() is
+        # safe/idempotent and is how we get the final pass/fail result).
+        self.is_valid()
+
         start = self.cleaned_data.get('start_date')
         end = self.cleaned_data.get('end_date')
-        
+
         if not start:
             self.add_error('start_date', 'Start date is required for suspension.')
         if not end:
             self.add_error('end_date', 'End date is required for suspension.')
-        
+
         return self.is_valid()

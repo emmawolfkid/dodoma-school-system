@@ -1,0 +1,194 @@
+{% extends "audit/base.html" %}
+
+{% block content %}
+
+<style>
+    .audit-header {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .audit-header h1 {
+        font-size: 1.75rem;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+    }
+    
+    .audit-header p {
+        color: #64748b;
+        font-size: 0.875rem;
+    }
+    
+    .audit-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card h3 {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #4f46e5;
+    }
+    
+    .audit-table-container {
+        background: white;
+        border-radius: 12px;
+        overflow-x: auto;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 500px;
+    }
+    
+    .audit-table thead {
+        background: #f8fafc;
+    }
+    
+    .audit-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .audit-table td {
+        padding: 0.875rem 1rem;
+        font-size: 0.875rem;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .audit-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-create {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .badge-update {
+        background: #fed7aa;
+        color: #9a3412;
+    }
+    
+    .badge-delete {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    @media (max-width: 768px) {
+        .audit-header h1 {
+            font-size: 1.25rem;
+        }
+        .stat-card {
+            padding: 1rem;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<div class="audit-header">
+    <h1>📊 Audit Dashboard</h1>
+    <p>Monitor system activities and user actions across all modules</p>
+</div>
+
+<div class="audit-stats">
+    <div class="stat-card">
+        <h3>Total Logs</h3>
+        <div class="stat-number">{{ total_logs|default:"0" }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Today's Activity</h3>
+        <div class="stat-number">{{ today_logs|default:"0" }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>Last 7 Days</h3>
+        <div class="stat-number">{{ week_logs|default:"0" }}</div>
+    </div>
+</div>
+
+<div class="audit-header" style="margin-bottom: 1rem;">
+    <h2 style="font-size: 1.25rem; margin: 0;">📋 Recent Activity</h2>
+</div>
+
+<div class="audit-table-container">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Module</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in recent_logs %}
+            <tr>
+                <td>{{ log.user|default:"System" }}</td>
+                <td>
+                    {% if log.action == 'create' %}
+                        <span class="badge badge-create">CREATE</span>
+                    {% elif log.action == 'update' %}
+                        <span class="badge badge-update">UPDATE</span>
+                    {% elif log.action == 'delete' %}
+                        <span class="badge badge-delete">DELETE</span>
+                    {% else %}
+                        <span class="badge">{{ log.action|upper }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ log.module|default:"-" }}</td>
+                <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 2rem;">No logs found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

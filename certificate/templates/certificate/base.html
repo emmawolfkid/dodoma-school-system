@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Certificate Module{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'certificate/css/certificate.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar-overlay" onclick="toggleCertificateSidebar()"></div>
+
+    <aside class="cert-sidebar" id="certSidebar">
+        <div class="cert-brand">
+            <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+            <div>
+                <strong>Certificate</strong>
+                <span>Graduate Records</span>
+            </div>
+        </div>
+
+        <nav class="cert-nav">
+            <a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Main Dashboard</a>
+            <a href="{% url 'certificate:certificate_dashboard' %}"><i class="fas fa-chart-line"></i> Certificate Dashboard</a>
+            <a href="{% url 'certificate:graduates_list' %}"><i class="fas fa-user-graduate"></i> Graduates List</a>
+            <span class="nav-label">Workflows</span>
+            <a href="{% url 'certificate:graduates_list' %}?status=available"><i class="fas fa-box-open"></i> Received Documents</a>
+            <a href="{% url 'certificate:graduates_list' %}?status=none"><i class="fas fa-clock"></i> Waiting Collection</a>
+            <a href="{% url 'registration_dashboard' %}"><i class="fas fa-address-card"></i> Registration</a>
+        </nav>
+
+        <a class="cert-logout" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+    <main class="cert-main">
+        <header class="cert-topbar">
+            <div class="actions-row">
+                <button type="button" class="mobile-toggle" onclick="toggleCertificateSidebar()" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <span class="topbar-label">Certificate Module</span>
+                    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                </div>
+            </div>
+            <a href="javascript:history.back()" class="btn ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+        </header>
+
+        {% if messages %}
+            <div class="messages-stack">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+    function toggleCertificateSidebar() {
+        document.getElementById('certSidebar').classList.toggle('active');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+    </script>
+</body>
+</html>

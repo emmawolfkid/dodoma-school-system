@@ -1,93 +1,219 @@
-/* Users Management Specific Styles */
+/* registration/css/dashboard.css */
 
-/* Permission Badges */
-.permission-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+/* Dashboard Layout - Extends Base Template */
+.page-header {
+    margin-bottom: 2rem;
 }
 
-.perm-badge {
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
+.page-title {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
 }
 
-.perm-enabled {
-    background: #d1fae5;
-    color: #065f46;
+/* Stats Grid - Clean Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
-.perm-disabled {
-    background: #f3f4f6;
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.stat-number {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #2563eb;
+    margin: 0.5rem 0;
+}
+
+.stat-label {
     color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Action Buttons */
-.action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+/* Main Card for Table */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
 }
 
-.perm-toggle-group {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
+.card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
 }
 
-.btn-perm {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+/* Table Styles */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background: #f9fafb;
+}
+
+.data-table th {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    color: #6b7280;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.data-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* Approve Button */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     text-decoration: none;
+    border-radius: 6px;
     transition: all 0.2s;
+    border: none;
+    cursor: pointer;
 }
 
-.btn-perm-on {
+.btn-sm {
+    padding: 0.375rem 0.875rem;
+    font-size: 0.75rem;
+}
+
+.btn-success {
     background: #10b981;
     color: white;
 }
 
-.btn-perm-on:hover {
+.btn-success:hover {
     background: #059669;
+    transform: translateY(-1px);
 }
 
-.btn-perm-off {
-    background: #ef4444;
-    color: white;
+/* Action Cards Grid */
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 0.5rem;
 }
 
-.btn-perm-off:hover {
-    background: #dc2626;
+.action-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    display: block;
 }
 
-/* Info Card */
-.info-card {
-    background: #e0e7ff;
-    border-left: 4px solid #4f46e5;
-    border-radius: 8px;
-    padding: 15px 20px;
-    display: flex;
-    gap: 15px;
-    margin-top: 20px;
+.action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
-.info-icon {
-    font-size: 1.5rem;
+.action-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
 }
 
-.info-content ul {
-    margin: 8px 0 0 20px;
+.action-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
 }
 
-.info-content li {
-    margin: 5px 0;
+.action-card p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Responsive - Desktop First, Then Mobile */
+@media (max-width: 1024px) {
+    .actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
 }
 
 @media (max-width: 768px) {
-    .info-card {
-        flex-direction: column;
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .stat-card {
+        padding: 1.25rem;
+    }
+    
+    .action-card {
+        padding: 1.25rem;
     }
 }

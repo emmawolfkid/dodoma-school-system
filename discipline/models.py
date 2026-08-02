@@ -26,7 +26,10 @@ class DisciplineCase(models.Model):
 
     student = models.ForeignKey(
         'registration.Student',
-        on_delete=models.CASCADE,
+        # Discipline history must survive a Student row being removed —
+        # archive the student instead of deleting; PROTECT stops an
+        # accidental hard-delete from silently wiping their case history.
+        on_delete=models.PROTECT,
         related_name='discipline_cases',
         db_index=True
     )

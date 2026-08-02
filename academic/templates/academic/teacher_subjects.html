@@ -1,80 +1,95 @@
 {% extends "academic/base.html" %}
 
 {% block content %}
-
-<div style="max-width: 1100px; margin: auto; padding: 20px;">
-
-    <h2 style="margin-bottom: 20px;">📘 My Assigned Subjects</h2>
-
-    {% if subjects %}
-
-    <!-- O-LEVEL -->
-    <h3 style="background:#4CAF50; color:white; padding:10px; border-radius:5px;">
-        🟢 O-Level Subjects
-    </h3>
-
-    <table border="1" cellpadding="10" width="100%" style="margin-bottom:20px;">
-        <tr style="background:#f5f5f5;">
-            <th>#</th>
-            <th>Subject</th>
-            <th>Class</th>
-            <th>Action</th>
-        </tr>
-
-        {% for s in subjects %}
-            {% if s.level == 'O' %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>📚 {{ s.subject.name }} ({{ s.subject.code }})</td>
-                <td>🎓 {{ s.student_class }}</td>
-                <td>
-                    <a href="{% url 'select_exam' s.subject.id s.student_class %}">
-                        ➡️ Enter Marks
-                    </a>
-                </td>
-            </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
-
-
-    <!-- A-LEVEL -->
-    <h3 style="background:#2196F3; color:white; padding:10px; border-radius:5px;">
-        🔵 A-Level Subjects
-    </h3>
-
-    <table border="1" cellpadding="10" width="100%">
-        <tr style="background:#f5f5f5;">
-            <th>#</th>
-            <th>Subject</th>
-            <th>Class</th>
-            <th>Action</th>
-        </tr>
-
-        {% for s in subjects %}
-            {% if s.level == 'A' %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>📚 {{ s.subject.name }} ({{ s.subject.code }})</td>
-                <td>🎓 {{ s.student_class }}</td>
-                <td>
-                    <a href="{% url 'select_exam' s.subject.id s.student_class %}">
-                        ➡️ Enter Marks
-                    </a>
-                </td>
-            </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
-
-    {% else %}
-
-    <div style="padding:20px; background:#fff3cd; border-radius:6px;">
-        ⚠️ No subjects assigned yet. Contact academic admin.
+<div class="page-shell">
+    <div class="page-header">
+        <h2>My Assigned Subjects</h2>
+        <p>Choose a subject and class, then select an exam to enter marks manually or upload Excel.</p>
     </div>
 
+    <form method="get" class="filter-bar panel">
+        <label>
+            Search
+            <input type="search" name="q" value="{{ query }}" placeholder="Subject, code, or class">
+        </label>
+        <label>
+            Level
+            <select name="level">
+                <option value="">All Levels</option>
+                <option value="O" {% if filter_level == 'O' %}selected{% endif %}>O-Level</option>
+                <option value="A" {% if filter_level == 'A' %}selected{% endif %}>A-Level</option>
+            </select>
+        </label>
+        <button type="submit">Search</button>
+        <a href="{% url 'teacher_subjects' %}" class="btn ghost">Reset</a>
+    </form>
+
+    {% if subjects %}
+        <h3 class="section-title">O-Level Subjects</h3>
+        <div class="table-panel table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Class</th>
+                        <th>Level</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                        {% if s.level == 'O' %}
+                        <tr>
+                            <td><strong>{{ s.subject.name }}</strong><br><small>{{ s.subject.code }}</small></td>
+                            <td>{{ s.student_class }}</td>
+                            <td><span class="badge success">O-Level</span></td>
+                            <td><a href="{% url 'select_exam' s.subject.id s.student_class %}" class="btn success">Select Exam</a></td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h3 class="section-title">A-Level Subjects</h3>
+        <div class="table-panel table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Class</th>
+                        <th>Level</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                        {% if s.level == 'A' %}
+                        <tr>
+                            <td><strong>{{ s.subject.name }}</strong><br><small>{{ s.subject.code }}</small></td>
+                            <td>{{ s.student_class }}</td>
+                            <td><span class="badge info">A-Level</span></td>
+                            <td><a href="{% url 'select_exam' s.subject.id s.student_class %}" class="btn success">Select Exam</a></td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?q={{ query }}&level={{ filter_level }}&page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?q={{ query }}&level={{ filter_level }}&page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="notice-box">No subjects found. Try changing your search or contact the academic admin.</div>
     {% endif %}
-
 </div>
-
 {% endblock %}

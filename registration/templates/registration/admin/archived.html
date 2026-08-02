@@ -41,9 +41,10 @@
             {% endif %}
         </div>
         <div class="action-buttons">
-            <a href="{% url 'restore_student' s.id %}" class="btn-restore" onclick="return confirm('Are you sure you want to restore {{ s.first_name }}?')">
-                ↻ Restore
-            </a>
+            <form action="{% url 'restore_student' s.id %}" method="post" class="restore-form" onsubmit="return confirm('Are you sure you want to restore {{ s.first_name }}?')">
+                {% csrf_token %}
+                <button type="submit" class="btn-restore">↻ Restore</button>
+            </form>
             <a href="{% url 'student_detail' s.id %}" class="btn-view">
                 👁️ View Details
             </a>

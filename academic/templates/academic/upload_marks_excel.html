@@ -3,39 +3,46 @@
 
 {% block content %}
 
-<h2>Upload Marks via Excel</h2>
+<div class="page-header">
+    <h2>Upload Marks via Excel</h2>
+    <p>Upload marks for the exact subject, class, and exam shown below.</p>
+</div>
 
-<p><strong>Subject:</strong> {{ subject.name }}</p>
-<p><strong>Class:</strong> {{ student_class }}</p>
-<p><strong>Exam:</strong> {{ exam.name }}</p>
+<div class="info-panel">
+    <p><strong>Subject:</strong> {{ subject.name }} ({{ subject.code }})</p>
+    <p><strong>Level:</strong> {{ exam.get_level_display }}</p>
+    <p><strong>Class:</strong> {{ student_class }}</p>
+    <p><strong>Exam:</strong> {{ exam.name }}</p>
+    <p><strong>Eligible students:</strong> {{ valid_students_count }}</p>
+</div>
 
-<hr>
-
-<form method="POST" enctype="multipart/form-data">
+<form method="POST" enctype="multipart/form-data" class="upload-form">
     {% csrf_token %}
 
-    <label>Select Excel File:</label><br>
-    <input type="file" name="file" required><br><br>
+    <label for="id_file">Select Excel file (.xlsx only)</label>
+    <input type="file" id="id_file" name="file" accept=".xlsx" required>
 
-    <button type="submit">Upload</button>
+    <button type="submit">Upload Marks</button>
 </form>
 
 <hr>
 
-<h3>Format Instructions:</h3>
+<h3>Excel Format</h3>
 
-{% if exam.level == "O" %}
-<pre>
-Reg No | Marks
-S001   | 67
-S002   | 54
-</pre>
+<p>Keep row 1 as headers. Start student marks from row 2. Use the student's registration number exactly as registered. Use <strong>ABS</strong> for absent students.</p>
+
+{% if is_advanced_level %}
+<pre>Reg No{% for paper in papers %} | P{{ paper.paper_number }}{% endfor %}
+{% if sample_students %}{{ sample_students.0.registration_number }}{% for paper in papers %} | 0-{{ paper.max_marks|floatformat:"-2" }}{% endfor %}{% else %}S001{% for paper in papers %} | 0-{{ paper.max_marks|floatformat:"-2" }}{% endfor %}{% endif %}
+{% if sample_students|length > 1 %}{{ sample_students.1.registration_number }}{% for paper in papers %} | ABS{% endfor %}{% else %}S002{% for paper in papers %} | ABS{% endfor %}{% endif %}</pre>
 {% else %}
-<pre>
-Reg No | P1 | P2 | P3
-S001   | 70 | 65 | 40
-S002   | 60 | 55 | 35
-</pre>
+<pre>Reg No | Marks
+{% if sample_students %}{{ sample_students.0.registration_number }} | 67{% else %}S001 | 67{% endif %}
+{% if sample_students|length > 1 %}{{ sample_students.1.registration_number }} | ABS{% else %}S002 | ABS{% endif %}</pre>
 {% endif %}
+
+<div class="notice-box">
+    <strong>Important:</strong> Rows for students outside this class, inactive students, archived students, or A-Level students not taking this subject will be skipped.
+</div>
 
 {% endblock %}

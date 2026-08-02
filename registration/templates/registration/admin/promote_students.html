@@ -1,0 +1,91 @@
+{% extends 'registration/base.html' %}
+{% load static %}
+{% load registration_extras %}
+
+{% block title %}Promote Students{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'registration/css/promote_students.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="promotion-shell">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Promote and Graduate Students</h1>
+            <p class="page-subtitle">Move active students to the next class, graduate Form 4 and Form 6, and keep skipped students visible for review.</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'promotion_revert_list' %}" class="btn btn-secondary">Revert Batches</a>
+            <a href="{% url 'view_students' %}" class="btn btn-secondary">Back to Students</a>
+        </div>
+    </div>
+
+    <div class="info-banner">
+        <p>Inactive and suspended students are not moved automatically. Review them before deciding whether to reactivate, transfer, or archive them.</p>
+    </div>
+
+    <form method="post" action="{% url 'promote_students' %}" class="card promotion-card">
+        {% csrf_token %}
+        <div class="form-row">
+            <div class="form-group">
+                <label for="academic_year">Academic Year</label>
+                <input type="number" id="academic_year" name="academic_year" value="{{ academic_year }}" required>
+            </div>
+        </div>
+
+        <h2>Select Classes</h2>
+        <div class="class-grid">
+            {% for class_name in all_classes %}
+            <label class="class-tile" for="class_{{ forloop.counter }}">
+                <input type="checkbox" name="classes_to_promote" value="{{ class_name }}" id="class_{{ forloop.counter }}">
+                <span class="class-name">{{ class_name }}</span>
+                <span class="class-count">{{ counts|get_item:class_name|default:0 }} active student(s)</span>
+                {% if class_name in graduating_classes %}
+                    <span class="rule-badge graduate">Graduates</span>
+                {% elif class_name in promotion_map %}
+                    <span class="rule-badge promote">{{ class_name }} to {{ promotion_map|get_item:class_name }}</span>
+                {% else %}
+                    <span class="rule-badge muted">No rule</span>
+                {% endif %}
+                {% if skipped_counts|get_item:class_name %}
+                    <span class="review-note">{{ skipped_counts|get_item:class_name }} inactive/suspended stay here</span>
+                {% endif %}
+            </label>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" name="action" value="confirm" class="btn btn-primary">Confirm Promotion</button>
+            <a href="{% url 'view_students' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div class="rules-grid">
+        <section class="card">
+            <h2>Promotion Rules</h2>
+            <div class="rule-list">
+                {% for from_class, to_class in promotion_map.items %}
+                    <div><strong>{{ from_class }}</strong><span>{{ to_class }}</span></div>
+                {% endfor %}
+                {% for class_name in graduating_classes %}
+                    <div><strong>{{ class_name }}</strong><span>Graduated</span></div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Review Before Promotion</h2>
+            <div class="rule-list">
+                {% for class_name in all_classes %}
+                    {% if skipped_counts|get_item:class_name %}
+                        <div><strong>{{ class_name }}</strong><span>{{ skipped_counts|get_item:class_name }} skipped</span></div>
+                    {% endif %}
+                {% empty %}
+                    <p class="empty-copy">No inactive or suspended students found.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

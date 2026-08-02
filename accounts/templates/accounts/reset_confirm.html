@@ -1,0 +1,24 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set New Password - School Management System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}?v=2">
+</head>
+<body>
+<div class="auth-page">
+<div class="container">
+    <h2>Set New Password</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Reset Password</button>
+    </form>
+</div>
+</div>
+</body>
+</html>

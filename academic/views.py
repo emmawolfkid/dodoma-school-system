@@ -1,19 +1,22 @@
 from django.shortcuts import render, get_object_or_404, redirect, reverse
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q, Count
 from django.http import HttpResponse
-from django.core.files.storage import FileSystemStorage
 
 import openpyxl
 
 from accounts.models import User, UserModule
 from registration.models import Student
 from .models import TeacherSubject, Exam, StudentMark, Subject, AcademicYear, Result, Paper, TeacherSubjectRequest, Notification, Combination, MarkSubmission
-from .utils import calculate_student_result, rank_students
+from .utils import calculate_student_result, rank_students, get_olevel_grade, get_alevel_grade
 from .utils_notifications import create_notification
 from .pdf_utils import generate_student_pdf, generate_class_pdf
+from audit.services import log_action  # ðŸ”¥ STEP 1 â€” IMPORT ADDED
 
 
 ACADEMIC_CLASSES = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6"]
@@ -41,6 +44,77 @@ def get_class_level(student_class):
     return None
 
 
+def get_students_for_exam(exam):
+    students = Student.objects.filter(
+        school_status='Active',
+        is_archived=False
+    )
+
+    if exam.student_class in ACADEMIC_CLASSES:
+        return students.filter(student_class=exam.student_class)
+    if exam.student_class == 'all_olevel':
+        return students.filter(student_class__in=["Form 1", "Form 2", "Form 3", "Form 4"])
+    if exam.student_class == 'all_alevel':
+        return students.filter(student_class__in=["Form 5", "Form 6"])
+    return students
+
+
+def is_academic_admin(user):
+    if user.is_superuser:
+        return True
+
+    return UserModule.objects.filter(
+        user=user,
+        module__name='academic',
+        is_approved=True,
+        is_admin=True
+    ).exists()
+
+
+def get_students_for_subject_class(subject, student_class):
+    students = Student.objects.filter(
+        student_class__iexact=student_class.strip(),
+        school_status='Active',
+        is_archived=False
+    )
+
+    if get_class_level(student_class) == 'A':
+        subject_code = subject.code.upper().strip() if subject.code else ""
+
+        if subject_code.startswith("GS"):
+            return students
+
+        combos = Combination.objects.filter(subjects=subject)
+        combo_names = [combo.name.strip().upper() for combo in combos]
+
+        if not combo_names:
+            return Student.objects.none()
+
+        students = students.filter(section__in=combo_names).distinct()
+
+    return students.order_by('first_name', 'last_name')
+
+
+def parse_excel_mark(value):
+    if value is None:
+        return None, False, None
+
+    if isinstance(value, str):
+        cleaned = value.strip().upper()
+        if not cleaned:
+            return None, False, None
+        if cleaned in ["ABS", "A", "ABSENT"]:
+            return 0, True, None
+        value = cleaned
+
+    try:
+        mark = float(value)
+    except (TypeError, ValueError):
+        return None, False, "not a valid number"
+
+    return mark, False, None
+
+
 # ===============================
 # ACADEMIC DASHBOARD
 # ===============================
@@ -48,7 +122,7 @@ def get_class_level(student_class):
 def academic_dashboard(request):
     user = request.user
     
-    # 🔥 SUPERUSER
+    # ðŸ”¥ SUPERUSER
     if user.is_superuser:
         role = 'admin'
         # Add stats for admin
@@ -69,7 +143,7 @@ def academic_dashboard(request):
             messages.error(request, "Access denied.")
             return redirect('dashboard')
         
-        # 🔥 ROLE DETECTION
+        # ðŸ”¥ ROLE DETECTION
         if user_module.is_admin:
             role = 'academic_admin'
             # Add stats for academic admin
@@ -91,13 +165,13 @@ def academic_dashboard(request):
                 is_active=True
             ).count()
     
-    # 🔔 NOTIFICATIONS
+    # ðŸ”” NOTIFICATIONS
     notifications = Notification.objects.filter(
         user=request.user,
         is_read=False
     ).order_by('-created_at')[:5]
     
-    # 📋 REQUEST COUNT
+    # ðŸ“‹ REQUEST COUNT
     pending_requests = TeacherSubjectRequest.objects.filter(
         is_approved=False
     ).count()
@@ -126,6 +200,16 @@ def academic_dashboard(request):
     
     return render(request, 'academic/dashboard.html', context)
 
+
+@login_required
+def mark_notifications_read(request):
+    Notification.objects.filter(
+        user=request.user,
+        is_read=False
+    ).update(is_read=True)
+    messages.success(request, "Notifications marked as read.")
+    return redirect(request.META.get('HTTP_REFERER') or 'academic_dashboard')
+
 # ===============================
 # TEACHER SUBJECT LIST
 # ===============================
@@ -137,8 +221,27 @@ def teacher_subjects(request):
         is_active=True
     ).select_related('subject').order_by('student_class')
 
+    query = request.GET.get('q', '').strip()
+    level = request.GET.get('level', '').strip()
+
+    if query:
+        subjects = subjects.filter(
+            Q(subject__name__icontains=query) |
+            Q(subject__code__icontains=query) |
+            Q(student_class__icontains=query)
+        )
+
+    if level in ['O', 'A']:
+        subjects = subjects.filter(level=level)
+
+    paginator = Paginator(subjects, 12)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
     return render(request, 'academic/teacher_subjects.html', {
-        'subjects': subjects
+        'page_obj': page_obj,
+        'subjects': page_obj.object_list,
+        'query': query,
+        'filter_level': level,
     })
 
 
@@ -205,16 +308,6 @@ def select_exam(request, subject_id, student_class):
         level_filter
     ).order_by('-created_at')
     
-    # Debug output
-    print(f"=== SELECT EXAM DEBUG ===")
-    print(f"Subject: {subject.name} (level: '{subject.level}')")
-    print(f"Student class: '{student_class}'")
-    print(f"Level filter: {level_filter}")
-    print(f"Exams found: {exams.count()}")
-    for e in exams:
-        print(f"  - {e.name}: class='{e.student_class}', level='{e.level}'")
-    print(f"=========================")
-    
     if not exams.exists():
         messages.warning(request, f"No exams found for {student_class} - {subject.name}")
     
@@ -229,9 +322,31 @@ def enter_marks(request, exam_id, subject_id, student_class):
 
     exam = get_object_or_404(Exam, id=exam_id)
     subject = get_object_or_404(Subject, id=subject_id)
+    class_level = get_class_level(student_class)
+    is_admin = is_academic_admin(request.user)
+
+    if not class_level:
+        messages.error(request, "Invalid class selected.")
+        return redirect('teacher_subjects')
+
+    if subject.level != class_level or exam.level != class_level:
+        messages.error(request, "Subject, class, and exam level do not match.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class not in [student_class, 'all', 'all_olevel', 'all_alevel', None, '']:
+        messages.error(request, "This exam does not apply to the selected class.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class == 'all_olevel' and class_level != 'O':
+        messages.error(request, "This exam is for O-Level classes only.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class == 'all_alevel' and class_level != 'A':
+        messages.error(request, "This exam is for A-Level classes only.")
+        return redirect('teacher_subjects')
 
     # ===============================
-    # 🔒 SECURITY CHECKS
+    # ðŸ”’ SECURITY CHECKS
     # ===============================
     is_admin = request.user.is_superuser or UserModule.objects.filter(
         user=request.user,
@@ -253,7 +368,7 @@ def enter_marks(request, exam_id, subject_id, student_class):
             return redirect('teacher_subjects')
 
     # ===============================
-    # 🔒 EXAM STATUS
+    # ðŸ”’ EXAM STATUS
     # ===============================
     if exam.is_locked:
         messages.error(request, "This exam is locked.")
@@ -264,14 +379,14 @@ def enter_marks(request, exam_id, subject_id, student_class):
         return redirect('teacher_subjects')
 
     # ===============================
-    # 🚨 LEVEL CHECK
+    # ðŸš¨ LEVEL CHECK
     # ===============================
     if subject.level != exam.level:
         messages.error(request, "Subject does not belong to this exam level.")
         return redirect('teacher_subjects')
 
     # ===============================
-    # 📌 SUBMISSION CONTROL
+    # ðŸ“Œ SUBMISSION CONTROL
     # ===============================
     submission, _ = MarkSubmission.objects.get_or_create(
         exam=exam,
@@ -279,47 +394,18 @@ def enter_marks(request, exam_id, subject_id, student_class):
         student_class=student_class
     )
 
-    # 🔥 SOFT LOCK (ONLY ADMIN CAN EDIT WHEN LOCKED)
+    # ðŸ”¥ SOFT LOCK (ONLY ADMIN CAN EDIT WHEN LOCKED)
     if exam.is_locked and not is_admin:
         messages.error(request, "Marks are locked for this subject.")
         return redirect('teacher_subjects')
 
     # ===============================
-    # 🎯 GET STUDENTS
+    # ðŸŽ¯ GET STUDENTS
     # ===============================
-    students = Student.objects.filter(
-        student_class__iexact=student_class.strip(),
-        school_status='Active',
-        is_archived=False
-    )
+    students = get_students_for_subject_class(subject, student_class)
 
     # ===============================
-    # 🎓 A-LEVEL FILTERING (FIXED)
-    # ===============================
-    if exam.level == 'A':
-
-        subject_code = subject.code.upper().strip() if subject.code else ""
-
-        # ✅ GS_A → ALL STUDENTS
-        if subject_code.startswith("GS"):
-            pass
-
-        else:
-            combos = Combination.objects.filter(subjects=subject)
-
-            if combos.exists():
-                combo_names = [c.name.strip().upper() for c in combos]
-
-                students = students.filter(
-                    section__in=combo_names
-                ).distinct()
-            else:
-                students = Student.objects.none()
-
-    students = students.order_by('first_name', 'last_name')
-
-    # ===============================
-    # 📄 PAPERS
+    # ðŸ“„ PAPERS
     # ===============================
     if exam.level == 'A':
         papers = Paper.objects.filter(subject=subject).order_by('paper_number')
@@ -329,7 +415,7 @@ def enter_marks(request, exam_id, subject_id, student_class):
     is_advanced = exam.level == 'A'
 
     # ===============================
-    # 💾 SAVE / SUBMIT MARKS
+    # ðŸ’¾ SAVE / SUBMIT MARKS
     # ===============================
     if request.method == 'POST':
 
@@ -337,12 +423,60 @@ def enter_marks(request, exam_id, subject_id, student_class):
         saved_count = 0
         errors = []
 
-        for student in students:
+        # 🔒 One transaction for the whole batch — a mid-loop failure must
+        # not leave some students' marks saved and others not.
+        with transaction.atomic():
+            for student in students:
 
-            if is_advanced:
-                for paper in papers:
+                if is_advanced:
+                    for paper in papers:
 
-                    key = f"marks_{student.id}_p{paper.paper_number}"
+                        key = f"marks_{student.id}_p{paper.paper_number}"
+                        value = request.POST.get(key)
+
+                        if not value:
+                            continue
+
+                        value = value.strip().upper()
+
+                        if value == "ABS":
+                            StudentMark.objects.update_or_create(
+                                student=student,
+                                exam=exam,
+                                subject=subject,
+                                paper=paper,
+                                defaults={
+                                    'marks': 0,
+                                    'is_absent': True,
+                                    'uploaded_by': request.user
+                                }
+                            )
+                            continue
+
+                        try:
+                            mark_value = float(value)
+
+                            if 0 <= mark_value <= paper.max_marks:
+                                StudentMark.objects.update_or_create(
+                                    student=student,
+                                    exam=exam,
+                                    subject=subject,
+                                    paper=paper,
+                                    defaults={
+                                        'marks': mark_value,
+                                        'is_absent': False,
+                                        'uploaded_by': request.user
+                                    }
+                                )
+                                saved_count += 1
+                            else:
+                                errors.append(f"{student} P{paper.paper_number} invalid")
+
+                        except ValueError:
+                            errors.append(f"{student} P{paper.paper_number} not a number")
+
+                else:
+                    key = f"marks_{student.id}"
                     value = request.POST.get(key)
 
                     if not value:
@@ -355,7 +489,7 @@ def enter_marks(request, exam_id, subject_id, student_class):
                             student=student,
                             exam=exam,
                             subject=subject,
-                            paper=paper,
+                            paper=None,
                             defaults={
                                 'marks': 0,
                                 'is_absent': True,
@@ -367,12 +501,12 @@ def enter_marks(request, exam_id, subject_id, student_class):
                     try:
                         mark_value = float(value)
 
-                        if 0 <= mark_value <= paper.max_marks:
+                        if 0 <= mark_value <= 100:
                             StudentMark.objects.update_or_create(
                                 student=student,
                                 exam=exam,
                                 subject=subject,
-                                paper=paper,
+                                paper=None,
                                 defaults={
                                     'marks': mark_value,
                                     'is_absent': False,
@@ -381,71 +515,52 @@ def enter_marks(request, exam_id, subject_id, student_class):
                             )
                             saved_count += 1
                         else:
-                            errors.append(f"{student} P{paper.paper_number} invalid")
+                            errors.append(f"{student} invalid mark")
 
                     except ValueError:
-                        errors.append(f"{student} P{paper.paper_number} not a number")
-
-            else:
-                key = f"marks_{student.id}"
-                value = request.POST.get(key)
-
-                if not value:
-                    continue
-
-                value = value.strip().upper()
-
-                if value == "ABS":
-                    StudentMark.objects.update_or_create(
-                        student=student,
-                        exam=exam,
-                        subject=subject,
-                        paper=None,
-                        defaults={
-                            'marks': 0,
-                            'is_absent': True,
-                            'uploaded_by': request.user
-                        }
-                    )
-                    continue
-
-                try:
-                    mark_value = float(value)
-
-                    if 0 <= mark_value <= 100:
-                        StudentMark.objects.update_or_create(
-                            student=student,
-                            exam=exam,
-                            subject=subject,
-                            paper=None,
-                            defaults={
-                                'marks': mark_value,
-                                'is_absent': False,
-                                'uploaded_by': request.user
-                            }
-                        )
-                        saved_count += 1
-                    else:
-                        errors.append(f"{student} invalid mark")
-
-                except ValueError:
-                    errors.append(f"{student} not a number")
+                        errors.append(f"{student} not a number")
 
         # ===============================
-        # 📌 SUBMIT (SOFT)
+        # ðŸ“Œ SUBMIT (SOFT)
         # ===============================
         if action == "submit":
             submission.is_submitted = True
             submission.submitted_by = request.user
             submission.submitted_at = timezone.now()
-            submission.is_locked = False  # 🔥 IMPORTANT FIX
             submission.save()
 
             messages.success(request, "Marks submitted (still editable until admin locks).")
+            
+            # ðŸ”¥ STEP 2 â€” SUBMIT LOG
+            log_action(
+                user=request.user,
+                action='update',
+                instance=exam,
+                module='academic',
+                changes={
+                    "event": "marks_submitted",
+                    "subject": subject.name,
+                    "class": student_class
+                }
+            )
         else:
             messages.success(request, f"{saved_count} marks saved.")
+            
+            # ðŸ”¥ STEP 2 â€” SAVE MARKS LOG
+            log_action(
+                user=request.user,
+                action='update',
+                instance=exam,
+                module='academic',
+                changes={
+                    "event": "marks_saved",
+                    "subject": subject.name,
+                    "class": student_class,
+                    "count": saved_count
+                }
+            )
 
-        # 🔥 SHOW ERRORS (if any)
+        # ðŸ”¥ SHOW ERRORS (if any)
         if errors:
             for err in errors[:5]:
                 messages.warning(request, err)
@@ -453,7 +568,7 @@ def enter_marks(request, exam_id, subject_id, student_class):
         return redirect('enter_marks', exam.id, subject.id, student_class)
 
     # ===============================
-    # 📊 LOAD EXISTING MARKS
+    # ðŸ“Š LOAD EXISTING MARKS
     # ===============================
     marks_dict = {}
 
@@ -468,7 +583,7 @@ def enter_marks(request, exam_id, subject_id, student_class):
         marks_dict[key] = "ABS" if mark.is_absent else str(mark.marks)
 
     # ===============================
-    # 📊 TOTALS
+    # ðŸ“Š TOTALS
     # ===============================
     student_totals = {}
 
@@ -513,7 +628,6 @@ def unlock_marks(request, exam_id, subject_id, student_class):
     ).first()
 
     if submission:
-        submission.is_locked = False
         submission.is_submitted = False
         submission.save()
 
@@ -559,7 +673,20 @@ def clear_subject_marks(request, exam_id, subject_id, student_class):
         student__student_class=student_class
     ).delete()[0]
     
-    messages.success(request, f"🗑️ Cleared {deleted_count} mark records for {subject.name} - {exam.name}")
+    messages.success(request, f"ðŸ—‘ï¸ Cleared {deleted_count} mark records for {subject.name} - {exam.name}")
+    
+    # ðŸ”¥ STEP 9 â€” CLEAR MARKS LOG
+    log_action(
+        user=request.user,
+        action='delete',
+        instance=exam,
+        module='academic',
+        changes={
+            "event": "marks_cleared",
+            "subject": subject.name,
+            "count": deleted_count
+        }
+    )
     
     return redirect('enter_marks', exam_id=exam_id, subject_id=subject_id, student_class=student_class)
 
@@ -581,6 +708,10 @@ def exam_dashboard(request):
 @login_required
 def create_exam(request, exam_id=None):
 
+    if not can_manage_results(request.user):
+        messages.error(request, "Access denied! Only admins or exam coordinators can manage exams.")
+        return redirect('exam_dashboard')
+
     current_year = AcademicYear.get_current_year()
     years = AcademicYear.objects.filter(is_active=True)
     exam = None
@@ -596,7 +727,7 @@ def create_exam(request, exam_id=None):
         year_id = request.POST.get('year')
 
         # ===============================
-        # 🔥 NORMALIZE CLASS (VERY IMPORTANT)
+        # ðŸ”¥ NORMALIZE CLASS (VERY IMPORTANT)
         # ===============================
         if not student_class or student_class.strip() == "":
             student_class = 'all'
@@ -604,7 +735,7 @@ def create_exam(request, exam_id=None):
         student_class = student_class.strip()
 
         # ===============================
-        # 🚨 VALIDATION (LEVEL vs CLASS)
+        # ðŸš¨ VALIDATION (LEVEL vs CLASS)
         # ===============================
         o_classes = ['Form 1', 'Form 2', 'Form 3', 'Form 4']
         a_classes = ['Form 5', 'Form 6']
@@ -618,12 +749,12 @@ def create_exam(request, exam_id=None):
             return redirect('create_exam')
 
         # ===============================
-        # 📅 YEAR
+        # ðŸ“… YEAR
         # ===============================
         year = AcademicYear.objects.filter(id=year_id).first() or current_year
 
         # ===============================
-        # ✏️ UPDATE EXAM
+        # âœï¸ UPDATE EXAM
         # ===============================
         if exam:
             exam.name = name
@@ -632,11 +763,24 @@ def create_exam(request, exam_id=None):
             exam.student_class = student_class
             exam.academic_year = year
             exam.save()
+            
+            # ðŸ”¥ STEP 3 â€” UPDATE LOG
+            log_action(
+                user=request.user,
+                action='update',
+                instance=exam,
+                module='academic',
+                changes={
+                    "exam": exam.name,
+                    "class": exam.student_class,
+                    "level": exam.level
+                }
+            )
 
             action_msg = "updated"
 
         # ===============================
-        # ➕ CREATE EXAM
+        # âž• CREATE EXAM
         # ===============================
         else:
             exam = Exam.objects.create(
@@ -647,11 +791,24 @@ def create_exam(request, exam_id=None):
                 academic_year=year,
                 created_by=request.user
             )
+            
+            # ðŸ”¥ STEP 3 â€” CREATE LOG
+            log_action(
+                user=request.user,
+                action='create',
+                instance=exam,
+                module='academic',
+                changes={
+                    "exam": exam.name,
+                    "class": exam.student_class,
+                    "level": exam.level
+                }
+            )
 
             action_msg = "created"
 
         # ===============================
-        # 🧠 FRIENDLY DISPLAY NAME
+        # ðŸ§  FRIENDLY DISPLAY NAME
         # ===============================
         class_display_map = {
             'all': 'All Classes (Form 1-6)',
@@ -662,23 +819,24 @@ def create_exam(request, exam_id=None):
         class_display = class_display_map.get(student_class, student_class)
 
         # ===============================
-        # ✅ SUCCESS MESSAGE
+        # âœ… SUCCESS MESSAGE
         # ===============================
         messages.success(
             request,
-            f"✅ Exam '{name}' {action_msg} for {class_display}!"
+            f"âœ… Exam '{name}' {action_msg} for {class_display}!"
         )
 
         return redirect('exam_dashboard')
 
     # ===============================
-    # 📦 CONTEXT
+    # ðŸ“¦ CONTEXT
     # ===============================
     context = {
         'years': years,
         'exam': exam,
         'terms': Exam.TERM_CHOICES,
         'level_choices': Exam.LEVEL_CHOICES,
+        'classes_list': ACADEMIC_CLASSES,
     }
 
     return render(request, 'academic/create_exam.html', context)
@@ -686,18 +844,34 @@ def create_exam(request, exam_id=None):
 @login_required
 def delete_exam(request, exam_id):
 
+    if not can_manage_results(request.user):
+        messages.error(request, "Access denied! Only admins or exam coordinators can delete exams.")
+        return redirect('exam_dashboard')
+
     exam = get_object_or_404(Exam, id=exam_id)
 
-    # 🔐 SAFETY CHECK
+    # ðŸ” SAFETY CHECK
     has_results = Result.objects.filter(exam=exam).exists()
 
     if has_results:
-        messages.error(request, "❌ Cannot delete exam with results!")
+        messages.error(request, "âŒ Cannot delete exam with results!")
         return redirect('exam_dashboard')
-
+    
+    exam_name = exam.name  # Store before delete
     exam.delete()
+    
+    # ðŸ”¥ STEP 4 â€” DELETE LOG
+    log_action(
+        user=request.user,
+        action='delete',
+        instance=exam,  # Note: exam instance is deleted but we still have the variable
+        module='academic',
+        changes={
+            "exam": exam_name
+        }
+    )
 
-    messages.success(request, "🗑️ Exam deleted successfully!")
+    messages.success(request, "ðŸ—‘ï¸ Exam deleted successfully!")
 
     return redirect('exam_dashboard')
 
@@ -706,6 +880,10 @@ def delete_exam(request, exam_id):
 # ===============================
 @login_required
 def toggle_lock_exam(request, exam_id):
+
+    if not can_manage_results(request.user):
+        messages.error(request, "Access denied! Only admins or exam coordinators can lock/unlock exams.")
+        return redirect('exam_dashboard')
 
     exam = get_object_or_404(Exam, id=exam_id)
 
@@ -719,6 +897,17 @@ def toggle_lock_exam(request, exam_id):
         messages.success(request, "Exam unlocked!")
 
     exam.save()
+    
+    # ðŸ”¥ STEP 5 â€” LOCK/UNLOCK LOG
+    log_action(
+        user=request.user,
+        action='update',
+        instance=exam,
+        module='academic',
+        changes={
+            "locked": exam.is_locked
+        }
+    )
 
     return redirect('exam_dashboard')
 
@@ -730,50 +919,50 @@ def generate_results(request, exam_id):
 
     exam = get_object_or_404(Exam, id=exam_id)
 
-    # 🔐 PERMISSION CHECK
+    # ðŸ” PERMISSION CHECK
     if not can_manage_results(request.user):
         messages.error(request, "You are not allowed to generate results")
         return redirect('exam_dashboard')
 
-    # 🚫 DO NOT GENERATE IF ALREADY PUBLISHED
+    # ðŸš« DO NOT GENERATE IF ALREADY PUBLISHED
     if exam.is_published:
         messages.error(request, "Results already published")
         return redirect('exam_dashboard')
 
-    # 🎯 GET STUDENTS BASED ON EXAM CLASS
-    if exam.student_class in ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6']:
-        students = Student.objects.filter(
-            student_class=exam.student_class,
-            school_status='Active',
-            is_archived=False
-        )
-    else:
-        # fallback (for all classes exams)
-        students = Student.objects.filter(
-            school_status='Active',
-            is_archived=False
-        )
+    # ðŸŽ¯ GET STUDENTS BASED ON EXAM CLASS
+    students = get_students_for_exam(exam)
+    ranked_results = rank_students(students, exam)
 
     created = 0
-
-    for student in students:
-
-        calc = calculate_student_result(student, exam)
-
+    for r in ranked_results:
         Result.objects.update_or_create(
             exam=exam,
-            student=student,
+            student=r["student"],
             defaults={
-                "total_points": calc.get("total_points", 0),
-                "division": calc.get("division", "-")
+                "total_points": r["points"],
+                "division": r["division"],
+                "position": r["position"]
             }
         )
-
         created += 1
 
     messages.success(request, f"{created} results generated successfully")
+    
+    # ðŸ”¥ STEP 6 â€” GENERATE RESULTS LOG
+    log_action(
+        user=request.user,
+        action='update',
+        instance=exam,
+        module='academic',
+        changes={
+            "event": "results_generated",
+            "count": created
+        }
+    )
 
     return redirect('exam_dashboard')
+
+
 # ===============================
 # PUBLISH RESULTS
 # ===============================
@@ -782,66 +971,82 @@ def publish_results(request, exam_id):
 
     exam = get_object_or_404(Exam, id=exam_id)
 
-    # 🔐 PERMISSION
+    # ðŸ” PERMISSION
     if not can_manage_results(request.user):
         messages.error(request, "You are not allowed to publish results")
         return redirect('exam_dashboard')
 
-    # 🚫 ALREADY PUBLISHED
+    # ðŸš« ALREADY PUBLISHED
     if exam.is_published:
         messages.warning(request, "Results already published")
         return redirect('exam_dashboard')
 
-    # ❌ CHECK RESULTS EXIST
+    # âŒ CHECK RESULTS EXIST
     has_results = Result.objects.filter(exam=exam).exists()
     if not has_results:
         messages.error(request, "Generate results first before publishing")
         return redirect('exam_dashboard')
 
-    # ❌ CHECK MARKS COMPLETENESS (IMPORTANT)
-    students = Student.objects.filter(
-        student_class=exam.student_class,
-        school_status='Active',
-        is_archived=False
-    )
+    # âŒ CHECK MARKS COMPLETENESS (IMPORTANT)
+    students = get_students_for_exam(exam)
 
-    total_students = students.count()
-
-    subjects = Subject.objects.filter(
-        studentmark__exam=exam
-    ).distinct()
-
-    incomplete = False
-
-    for subject in subjects:
-        uploaded = StudentMark.objects.filter(
-            exam=exam,
-            subject=subject,
-            student__student_class=exam.student_class
-        ).values('student').distinct().count()
-
-        if uploaded < total_students:
-            incomplete = True
-            break
-
-    if incomplete:
-        messages.error(request, "Not all marks are entered. Cannot publish.")
+    if not students.exists():
+        messages.error(request, "No active students found for this exam.")
         return redirect('exam_dashboard')
 
-    # ✅ PUBLISH
+    required_subjects = 7 if exam.level == 'O' else 3
+
+    subject_counts = dict(
+        StudentMark.objects.filter(exam=exam, student__in=students)
+        .values('student')
+        .annotate(subject_count=Count('subject', distinct=True))
+        .values_list('student', 'subject_count')
+    )
+
+    incomplete_students = [
+        student for student in students
+        if subject_counts.get(student.id, 0) < required_subjects
+    ]
+
+    if incomplete_students:
+        sample = ", ".join(
+            student.registration_number for student in incomplete_students[:5]
+        )
+        messages.error(
+            request,
+            f"Cannot publish. {len(incomplete_students)} student(s) have fewer than "
+            f"{required_subjects} subject results. Check: {sample}"
+        )
+        return redirect('exam_dashboard')
+
+    # âœ… PUBLISH
     exam.is_published = True
     exam.is_locked = True
+    exam.show_marks = True
     exam.save()
+    
+    # ðŸ”¥ STEP 7 â€” PUBLISH RESULTS LOG
+    log_action(
+        user=request.user,
+        action='update',
+        instance=exam,
+        module='academic',
+        changes={
+            "event": "results_published"
+        }
+    )
 
     messages.success(request, "Results published and exam locked")
 
     return redirect('exam_dashboard')
+
+
 @login_required
 def unpublish_results(request, exam_id):
 
     exam = get_object_or_404(Exam, id=exam_id)
 
-    # 🔐 PERMISSION (only admin level should unpublish)
+    # ðŸ” PERMISSION (only admin level should unpublish)
     if not request.user.is_superuser:
         is_admin = UserModule.objects.filter(
             user=request.user,
@@ -854,15 +1059,26 @@ def unpublish_results(request, exam_id):
             messages.error(request, "Only academic admin can unpublish results")
             return redirect('exam_dashboard')
 
-    # 🚫 IF NOT PUBLISHED
+    # ðŸš« IF NOT PUBLISHED
     if not exam.is_published:
         messages.warning(request, "Results are not published")
         return redirect('exam_dashboard')
 
-    # 🔓 UNPUBLISH
+    # ðŸ”“ UNPUBLISH
     exam.is_published = False
     exam.is_locked = False
     exam.save()
+    
+    # ðŸ”¥ STEP 8 â€” UNPUBLISH RESULTS LOG
+    log_action(
+        user=request.user,
+        action='update',
+        instance=exam,
+        module='academic',
+        changes={
+            "event": "results_unpublished"
+        }
+    )
 
     messages.success(request, "Results unpublished and exam unlocked")
 
@@ -876,12 +1092,12 @@ def class_results(request, exam_id, student_class):
 
     exam = get_object_or_404(Exam, id=exam_id)
 
-    # 🔐 ACCESS CONTROL
+    # ðŸ” ACCESS CONTROL
     if not exam.is_published and not request.user.is_staff:
         return redirect('academic_dashboard')
 
     # ===============================
-    # 🎯 SUBJECT FILTER (FIXED)
+    # ðŸŽ¯ SUBJECT FILTER (FIXED)
     # ===============================
     if exam.level == 'A':
         subjects = Subject.objects.filter(level__in=['A', 'BOTH'], is_active=True)
@@ -894,7 +1110,7 @@ def class_results(request, exam_id, student_class):
     ).distinct()
 
     # ===============================
-    # 📊 GET STUDENTS
+    # ðŸ“Š GET STUDENTS
     # ===============================
     students = Student.objects.filter(
         student_class=student_class,
@@ -917,32 +1133,43 @@ def class_results(request, exam_id, student_class):
         ranked_students.append({
             'student': student,
             'grades': grades_dict,
+            'total_marks_sum': calc["total_marks_sum"],
             'total_points': calc["total_points"],
-            'division': calc["division"]
+            'division': calc["division"],
+            'is_complete': calc["is_complete"]
         })
 
     # ===============================
-    # 🏆 SORT (LOW POINTS BEST)
+    # ðŸ† SORT (LOW POINTS BEST)
     # ===============================
-    ranked_students = sorted(ranked_students, key=lambda x: x['total_points'])
+    ranked_students = sorted(
+        ranked_students,
+        key=lambda x: (not x['is_complete'], -x['total_marks_sum'], x['total_points'])
+    )
 
     # ===============================
-    # 🏅 POSITION (HANDLE TIES)
+    # ðŸ… POSITION (HANDLE TIES)
     # ===============================
     position = 1
     for i, data in enumerate(ranked_students):
-        if i > 0 and data['total_points'] == ranked_students[i-1]['total_points']:
+        if (
+            i > 0
+            and data['total_points'] == ranked_students[i-1]['total_points']
+            and data['is_complete'] == ranked_students[i-1]['is_complete']
+        ):
             data['position'] = ranked_students[i-1]['position']
         else:
             data['position'] = position
         position += 1
 
     return render(request, 'academic/class_results.html', {
-        'exam': exam,
-        'student_class': student_class,
+        'selected_exam': exam,
+        'selected_class': student_class,
         'subjects': subjects,
         'students_data': ranked_students
     })
+
+
 @login_required
 def select_class_results(request):
 
@@ -961,6 +1188,8 @@ def select_class_results(request):
         'students_data': None,
         'subjects': None
     })
+
+
 # ===============================
 # STUDENT RESULT (DETAIL VIEW)
 # ===============================
@@ -971,18 +1200,18 @@ def student_result_detail(request, exam_id, student_id):
     student = get_object_or_404(Student, id=student_id)
 
     # ===============================
-    # 🔐 ACCESS CONTROL
+    # ðŸ” ACCESS CONTROL
     # ===============================
     if not exam.is_published and not request.user.is_staff:
         return redirect('academic_dashboard')
 
     # ===============================
-    # 🧮 CALCULATE RESULT
+    # ðŸ§® CALCULATE RESULT
     # ===============================
     result_summary = calculate_student_result(student, exam)
 
     # ===============================
-    # 🏆 GET POSITION
+    # ðŸ† GET POSITION
     # ===============================
     result_obj = Result.objects.filter(
         exam=exam,
@@ -992,7 +1221,7 @@ def student_result_detail(request, exam_id, student_id):
     result_summary['position'] = result_obj.position if result_obj else None
 
     # ===============================
-    # 📚 PROCESS SUBJECTS (FULL FIX)
+    # ðŸ“š PROCESS SUBJECTS (FULL FIX)
     # ===============================
     for sub in result_summary['subjects']:
 
@@ -1006,7 +1235,7 @@ def student_result_detail(request, exam_id, student_id):
 
         papers = {}
 
-        # ✅ CORRECT LOOP
+        # âœ… CORRECT LOOP
         for mark in marks_qs:
 
             if mark.paper:
@@ -1019,11 +1248,11 @@ def student_result_detail(request, exam_id, student_id):
                 "is_absent": mark.is_absent
             }
 
-        # ✅ attach papers
+        # âœ… attach papers
         sub['papers'] = papers
 
         # ===============================
-        # 🚨 ABSENT LOGIC
+        # ðŸš¨ ABSENT LOGIC
         # ===============================
         sub['is_absent'] = (
             all(p["is_absent"] for p in papers.values())
@@ -1031,7 +1260,7 @@ def student_result_detail(request, exam_id, student_id):
         )
 
         # ===============================
-        # 📊 TOTAL MARKS
+        # ðŸ“Š TOTAL MARKS
         # ===============================
         sub['total_marks'] = sum(
             p["score"] for p in papers.values()
@@ -1039,14 +1268,222 @@ def student_result_detail(request, exam_id, student_id):
         )
 
     # ===============================
-    # 📤 RENDER
+    # ðŸ“¤ RENDER
     # ===============================
     return render(request, 'academic/student_result_detail.html', {
         'student': student,
         'exam': exam,
         'result': result_summary,
-        'show_marks': exam.show_marks
+        'show_marks': exam.is_published or exam.show_marks
     })
+
+
+@login_required
+def transcript_center(request):
+    if not can_manage_results(request.user):
+        messages.error(request, "You are not allowed to download transcripts")
+        return redirect('academic_dashboard')
+
+    query = request.GET.get('q', '').strip()
+    selected_class = request.GET.get('student_class', '').strip()
+    selected_student_id = request.GET.get('student_id')
+
+    students = Student.objects.filter(is_archived=False).order_by(
+        'first_name', 'last_name'
+    )
+
+    if selected_class:
+        students = students.filter(student_class=selected_class)
+
+    if query:
+        students = students.filter(
+            Q(first_name__icontains=query) |
+            Q(middle_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(registration_number__icontains=query)
+        )
+
+    selected_student = None
+    published_results = Result.objects.none()
+
+    if selected_student_id:
+        selected_student = get_object_or_404(Student, id=selected_student_id)
+        published_results = Result.objects.filter(
+            student=selected_student,
+            exam__is_published=True
+        ).select_related('exam', 'exam__academic_year').order_by(
+            '-exam__academic_year__year', '-exam__created_at'
+        )
+
+    return render(request, 'academic/transcripts.html', {
+        'students': students[:100],
+        'query': query,
+        'selected_class': selected_class,
+        'selected_student': selected_student,
+        'published_results': published_results,
+        'academic_classes': ACADEMIC_CLASSES,
+    })
+
+
+@login_required
+def download_student_transcript(request, student_id):
+    if not can_manage_results(request.user):
+        messages.error(request, "You are not allowed to download transcripts")
+        return redirect('academic_dashboard')
+
+    student = get_object_or_404(Student, id=student_id)
+    results = Result.objects.filter(
+        student=student,
+        exam__is_published=True
+    ).select_related('exam', 'exam__academic_year').order_by(
+        'exam__academic_year__year', 'exam__created_at'
+    )
+
+    if not results.exists():
+        messages.error(request, "No published results found for this student")
+        return redirect('transcript_center')
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    import os
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="{student.registration_number}_transcript.pdf"'
+    )
+
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        rightMargin=1.2 * cm,
+        leftMargin=1.2 * cm,
+        topMargin=1 * cm,
+        bottomMargin=1 * cm
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'TranscriptTitle',
+        parent=styles['Title'],
+        fontSize=16,
+        alignment=1,
+        textColor=colors.HexColor('#12355b'),
+        spaceAfter=4
+    )
+    section_style = ParagraphStyle(
+        'TranscriptSection',
+        parent=styles['Heading3'],
+        fontSize=10,
+        textColor=colors.HexColor('#12355b'),
+        spaceBefore=10,
+        spaceAfter=5
+    )
+    normal_small = ParagraphStyle(
+        'TranscriptSmall',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=10
+    )
+    normal_small_center = ParagraphStyle(
+        'TranscriptSmallCenter',
+        parent=normal_small,
+        alignment=1
+    )
+
+    elements = []
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'school_logo.png')
+    if os.path.exists(logo_path):
+        elements.append(Image(logo_path, width=1.7 * cm, height=1.7 * cm))
+
+    elements.append(Paragraph("DODOMA SECONDARY SCHOOL", title_style))
+    elements.append(Paragraph("ACADEMIC TRANSCRIPT", styles['Heading2']))
+    elements.append(Spacer(1, 8))
+
+    student_name = f"{student.first_name} {student.middle_name or ''} {student.last_name or ''}".strip()
+    student_info = [
+        ["Name", student_name, "Registration No", student.registration_number],
+        ["Class", student.student_class, "Section", student.section],
+        ["Generated By", request.user.get_full_name() or request.user.username, "Status", student.school_status],
+    ]
+    info_table = Table(student_info, colWidths=[2.8 * cm, 5.3 * cm, 3 * cm, 5 * cm])
+    info_table.setStyle(TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#cbd5e1')),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f1f5f9')),
+        ('BACKGROUND', (2, 0), (2, -1), colors.HexColor('#f1f5f9')),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 10))
+
+    for result_obj in results:
+        exam = result_obj.exam
+        calc = calculate_student_result(student, exam)
+        heading = (
+            f"{exam.name} | {exam.academic_year.year} | "
+            f"{exam.get_level_display()} | Points: {calc['total_points']} | {calc['division']}"
+        )
+        elements.append(Paragraph(heading, section_style))
+
+        rows = [["Subject", "Marks", "Grade", "Points"]]
+        for subject_result in calc["subjects"]:
+            total_marks = "ABS" if subject_result["grade"] == "ABS" else str(subject_result.get("total_marks", "-"))
+            
+            # For A-Level, show paper breakdown in the Marks column
+            marks_display = total_marks
+            if exam.level == 'A' and subject_result.get("papers"):
+                paper_marks = []
+                for p in subject_result["papers"]:
+                    if p["paper_number"]:
+                        paper_marks.append(f"P{p['paper_number']}: {p['marks']}")
+                
+                if paper_marks:
+                    breakdown = ", ".join(paper_marks)
+                    marks_display = Paragraph(
+                        f"{total_marks}<br/><font size='7' color='#475569'>({breakdown})</font>",
+                        normal_small_center
+                    )
+
+            rows.append([
+                Paragraph(subject_result["subject"].name, normal_small),
+                marks_display,
+                subject_result["grade"],
+                subject_result["points"],
+            ])
+
+        result_table = Table(rows, colWidths=[8.3 * cm, 2.5 * cm, 2.4 * cm, 2.4 * cm])
+        result_table.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#cbd5e1')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#12355b')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ]))
+        elements.append(result_table)
+
+    doc.build(elements)
+
+    log_action(
+        user=request.user,
+        action='export',
+        instance=student,
+        module='academic',
+        changes={
+            'export_type': 'student_transcript',
+            'student': student.registration_number,
+            'published_exams': results.count(),
+        }
+    )
+
+    return response
 
 # ===============================
 # EXCEL UPLOAD MARKS
@@ -1056,8 +1493,29 @@ def upload_marks_excel(request, exam_id, subject_id, student_class):
 
     exam = get_object_or_404(Exam, id=exam_id)
     subject = get_object_or_404(Subject, id=subject_id)
+    class_level = get_class_level(student_class)
+    is_admin = is_academic_admin(request.user)
 
-    # CHECK TEACHER ASSIGNMENT
+    if not class_level:
+        messages.error(request, "Invalid class selected.")
+        return redirect('teacher_subjects')
+
+    if subject.level != class_level or exam.level != class_level:
+        messages.error(request, "Subject, class, and exam level do not match.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class not in [student_class, 'all', 'all_olevel', 'all_alevel', None, '']:
+        messages.error(request, "This exam does not apply to the selected class.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class == 'all_olevel' and class_level != 'O':
+        messages.error(request, "This exam is for O-Level classes only.")
+        return redirect('teacher_subjects')
+
+    if exam.student_class == 'all_alevel' and class_level != 'A':
+        messages.error(request, "This exam is for A-Level classes only.")
+        return redirect('teacher_subjects')
+
     is_assigned = TeacherSubject.objects.filter(
         teacher=request.user,
         subject=subject,
@@ -1065,118 +1523,104 @@ def upload_marks_excel(request, exam_id, subject_id, student_class):
         is_active=True
     ).exists()
 
-    if not is_assigned and not request.user.is_superuser:
+    if not is_assigned and not is_admin:
         messages.error(request, "You are not assigned to this subject/class!")
         return redirect('teacher_subjects')
 
-    # 🔒 LOCK CHECK
     if exam.is_locked:
         messages.error(request, "Marks are locked!")
         return redirect('teacher_subjects')
 
-    # 📊 PUBLISHED CHECK
     if exam.is_published:
         messages.error(request, "Results already published!")
         return redirect('teacher_subjects')
 
-    # ===============================
-    # 🎯 GET VALID STUDENTS FOR THIS SUBJECT (A-LEVEL COMBINATION FILTER)
-    # ===============================
-    is_advanced_level = student_class in ['Form 5', 'Form 6']
-    
-    if is_advanced_level:
-        # Get all combinations that have this subject
-        relevant_combinations = Combination.objects.filter(subjects=subject)
-        
-        if relevant_combinations.exists():
-            combination_names = [combo.name for combo in relevant_combinations]
-            valid_reg_numbers = Student.objects.filter(
-                student_class=student_class,
-                school_status='Active',
-                section__in=combination_names
-            ).values_list('registration_number', flat=True)
-            valid_reg_numbers = list(valid_reg_numbers)
-        else:
-            valid_reg_numbers = []
-    else:
-        # For O-Level, all students in the class are valid
-        valid_reg_numbers = Student.objects.filter(
-            student_class=student_class,
-            school_status='Active'
-        ).values_list('registration_number', flat=True)
-        valid_reg_numbers = list(valid_reg_numbers)
+    students = get_students_for_subject_class(subject, student_class)
+    valid_students = {
+        student.registration_number.strip().upper(): student
+        for student in students
+    }
+    papers = list(Paper.objects.filter(subject=subject).order_by('paper_number'))
+    is_advanced_level = class_level == 'A'
 
     if request.method == 'POST' and request.FILES.get('file'):
 
         file = request.FILES['file']
-        fs = FileSystemStorage()
-        filename = fs.save(file.name, file)
-        filepath = fs.path(filename)
+        if not file.name.lower().endswith('.xlsx'):
+            messages.error(request, "Upload an .xlsx Excel file.")
+            return redirect('upload_marks_excel', exam.id, subject.id, student_class)
 
-        wb = openpyxl.load_workbook(filepath)
+        try:
+            wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+        except Exception:
+            messages.error(request, "The Excel file could not be opened. Save it as .xlsx and try again.")
+            return redirect('upload_marks_excel', exam.id, subject.id, student_class)
+
         sheet = wb.active
-
         success_count = 0
         skipped_count = 0
+        error_rows = []
 
-        for row in sheet.iter_rows(min_row=2, values_only=True):
+        if sheet.max_row < 2:
+            messages.error(request, "The Excel file has no student rows.")
+            return redirect('upload_marks_excel', exam.id, subject.id, student_class)
 
-            reg_no = str(row[0]).strip()
+        with transaction.atomic():
+            for row_number, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
 
-            # Check if student is valid for this subject
-            if reg_no not in valid_reg_numbers:
-                skipped_count += 1
-                continue
+                if not row or not row[0]:
+                    continue
 
-            try:
-                student = Student.objects.get(
-                    registration_number=reg_no,
-                    student_class=student_class
-                )
-            except Student.DoesNotExist:
-                skipped_count += 1
-                continue
+                reg_no = str(row[0]).strip().upper()
+                student = valid_students.get(reg_no)
 
-            # O-LEVEL
-            if exam.level == 'O':
+                if not student:
+                    skipped_count += 1
+                    error_rows.append(f"Row {row_number}: {reg_no} is not an active valid student for {subject.name} in {student_class}.")
+                    continue
 
-                marks = row[1]
+                if not is_advanced_level:
+                    mark, is_absent, error = parse_excel_mark(row[1] if len(row) > 1 else None)
 
-                if marks is not None:
+                    if mark is None and not is_absent:
+                        if error:
+                            error_rows.append(f"Row {row_number}: marks {error}.")
+                        continue
+
+                    if not is_absent and not 0 <= mark <= 100:
+                        error_rows.append(f"Row {row_number}: marks must be between 0 and 100.")
+                        continue
+
                     StudentMark.objects.update_or_create(
                         student=student,
                         exam=exam,
                         subject=subject,
                         paper=None,
                         defaults={
-                            'marks': float(marks),
-                            'uploaded_by': request.user
+                            'marks': mark,
+                            'is_absent': is_absent,
+                            'uploaded_by': request.user,
+                            'last_updated_by': request.user,
                         }
                     )
                     success_count += 1
+                    continue
 
-            # A-LEVEL (PAPERS)
-            else:
+                if not papers:
+                    messages.error(request, f"No papers are configured for {subject.name}.")
+                    return redirect('upload_marks_excel', exam.id, subject.id, student_class)
 
-                p1, p2, p3 = row[1], row[2], row[3]
+                for index, paper in enumerate(papers, start=1):
+                    value = row[index] if len(row) > index else None
+                    mark, is_absent, error = parse_excel_mark(value)
 
-                papers = {
-                    1: p1,
-                    2: p2,
-                    3: p3
-                }
-
-                for paper_no, value in papers.items():
-
-                    if value is None:
+                    if mark is None and not is_absent:
+                        if error:
+                            error_rows.append(f"Row {row_number} P{paper.paper_number}: marks {error}.")
                         continue
 
-                    paper = Paper.objects.filter(
-                        subject=subject,
-                        paper_number=paper_no
-                    ).first()
-
-                    if not paper:
+                    if not is_absent and not 0 <= mark <= paper.max_marks:
+                        error_rows.append(f"Row {row_number} P{paper.paper_number}: marks must be between 0 and {paper.max_marks}.")
                         continue
 
                     StudentMark.objects.update_or_create(
@@ -1185,26 +1629,57 @@ def upload_marks_excel(request, exam_id, subject_id, student_class):
                         subject=subject,
                         paper=paper,
                         defaults={
-                            'marks': float(value),
-                            'uploaded_by': request.user
+                            'marks': mark,
+                            'is_absent': is_absent,
+                            'uploaded_by': request.user,
+                            'last_updated_by': request.user,
                         }
                     )
-
                     success_count += 1
 
+        MarkSubmission.objects.get_or_create(
+            exam=exam,
+            subject=subject,
+            student_class=student_class
+        )
+
+        log_action(
+            user=request.user,
+            action='update',
+            instance=exam,
+            module='academic',
+            changes={
+                "event": "excel_marks_uploaded",
+                "subject": subject.name,
+                "class": student_class,
+                "saved_count": success_count,
+                "skipped_count": skipped_count,
+                "error_count": len(error_rows),
+            }
+        )
+
         if skipped_count > 0:
-            messages.warning(request, f"✅ {success_count} records uploaded! ⚠️ {skipped_count} students skipped (not taking this subject)")
+            messages.warning(request, f"{success_count} marks uploaded. {skipped_count} rows skipped because the student is not valid for this subject/class.")
         else:
-            messages.success(request, f"✅ {success_count} records uploaded successfully!")
-            
-        return redirect('teacher_subjects')
+            messages.success(request, f"{success_count} marks uploaded successfully.")
+
+        if error_rows:
+            for error in error_rows[:8]:
+                messages.warning(request, error)
+            if len(error_rows) > 8:
+                messages.warning(request, f"{len(error_rows) - 8} more row issues were hidden.")
+
+        return redirect('enter_marks', exam.id, subject.id, student_class)
 
     return render(request, 'academic/upload_marks_excel.html', {
         'exam': exam,
         'subject': subject,
-        'student_class': student_class
+        'student_class': student_class,
+        'papers': papers,
+        'is_advanced_level': is_advanced_level,
+        'valid_students_count': len(valid_students),
+        'sample_students': list(students[:5]),
     })
-
 # ===============================
 # DOWNLOAD PDFS
 # ===============================
@@ -1213,6 +1688,10 @@ def download_student_pdf(request, exam_id, student_id):
 
     exam = get_object_or_404(Exam, id=exam_id)
     student = get_object_or_404(Student, id=student_id)
+
+    # 🔐 ACCESS CONTROL
+    if not exam.is_published and not request.user.is_staff:
+        return redirect('academic_dashboard')
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{student.first_name}_result.pdf"'
@@ -1223,9 +1702,13 @@ def download_student_pdf(request, exam_id, student_id):
 
 
 @login_required
-def download_class_pdf(request, exam_id, student_class):
+def download_class_pdf_for_class(request, exam_id, student_class):
 
     exam = get_object_or_404(Exam, id=exam_id)
+
+    # 🔐 ACCESS CONTROL
+    if not exam.is_published and not request.user.is_staff:
+        return redirect('academic_dashboard')
 
     students = Student.objects.filter(
         student_class=student_class,
@@ -1246,17 +1729,57 @@ def download_class_pdf(request, exam_id, student_class):
 @login_required
 def academic_users(request):
 
+    if not is_academic_admin(request.user):
+        messages.error(request, "Access denied! Admins only.")
+        return redirect('exam_dashboard')
+
     user_modules = UserModule.objects.filter(
         module__name='academic'
     ).select_related('user')
 
+    query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', '').strip()
+    role = request.GET.get('role', '').strip()
+
+    if query:
+        user_modules = user_modules.filter(
+            Q(user__username__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__email__icontains=query)
+        )
+
+    if status == 'approved':
+        user_modules = user_modules.filter(is_approved=True)
+    elif status == 'pending':
+        user_modules = user_modules.filter(is_approved=False)
+
+    if role == 'admin':
+        user_modules = user_modules.filter(is_admin=True)
+    elif role == 'coordinator':
+        user_modules = user_modules.filter(is_exam_coordinator=True)
+    elif role == 'teacher':
+        user_modules = user_modules.filter(is_admin=False, is_exam_coordinator=False)
+
+    user_modules = user_modules.order_by('is_approved', 'user__first_name', 'user__username')
+    paginator = Paginator(user_modules, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
     return render(request, 'academic/academic_users.html', {
-        'user_modules': user_modules
+        'user_modules': page_obj.object_list,
+        'page_obj': page_obj,
+        'query': query,
+        'filter_status': status,
+        'filter_role': role,
     })
 
 
 @login_required
 def approve_academic_user(request, user_id):
+
+    if not is_academic_admin(request.user):
+        messages.error(request, "Access denied! Admins only.")
+        return redirect('academic_users')
 
     user = get_object_or_404(User, id=user_id)
 
@@ -1273,12 +1796,16 @@ def approve_academic_user(request, user_id):
 @login_required
 def assign_subjects(request, user_id):
 
+    if not is_academic_admin(request.user):
+        messages.error(request, "Access denied! Admins only.")
+        return redirect('academic_users')
+
     user = get_object_or_404(User, id=user_id)
 
     classes = ACADEMIC_CLASSES
 
     # ===============================
-    # 🔥 DETERMINE LEVEL FROM CLASS
+    # ðŸ”¥ DETERMINE LEVEL FROM CLASS
     # ===============================
     def get_level(student_class):
         if student_class in ["Form 1", "Form 2", "Form 3", "Form 4"]:
@@ -1293,17 +1820,17 @@ def assign_subjects(request, user_id):
         student_class = request.POST.get('class_select')
 
         if not student_class:
-            messages.error(request, "❌ Please select a class!")
+            messages.error(request, "âŒ Please select a class!")
             return redirect('assign_subjects', user_id=user_id)
 
         level = get_class_level(student_class)
 
         if not level:
-            messages.error(request, "❌ Invalid class selected!")
+            messages.error(request, "âŒ Invalid class selected!")
             return redirect('assign_subjects', user_id=user_id)
 
         if not subject_ids:
-            messages.error(request, "❌ Please select at least one subject!")
+            messages.error(request, "âŒ Please select at least one subject!")
             return redirect('assign_subjects', user_id=user_id)
 
         assigned_count = 0
@@ -1312,7 +1839,7 @@ def assign_subjects(request, user_id):
         for subject_id in subject_ids:
             subject = get_object_or_404(Subject, id=subject_id)
 
-            # 🔥 BLOCK WRONG LEVEL ASSIGNMENT
+            # ðŸ”¥ BLOCK WRONG LEVEL ASSIGNMENT
             if subject.level != level:
                 skipped_count += 1
                 continue
@@ -1338,7 +1865,7 @@ def assign_subjects(request, user_id):
                 teacher=user,
                 subject=subject,
                 student_class=student_class,
-                level=level,  # 🔥 IMPORTANT
+                level=level,  # ðŸ”¥ IMPORTANT
                 is_active=True
             )
 
@@ -1346,18 +1873,18 @@ def assign_subjects(request, user_id):
 
             create_notification(
                 user,
-                f"✅ Assigned {subject.name} for {student_class}"
+                f"âœ… Assigned {subject.name} for {student_class}"
             )
 
         if assigned_count > 0:
-            messages.success(request, f"✅ {assigned_count} subject(s) assigned!")
+            messages.success(request, f"âœ… {assigned_count} subject(s) assigned!")
         if skipped_count > 0:
-            messages.warning(request, f"⚠️ {skipped_count} skipped (already assigned or wrong level).")
+            messages.warning(request, f"âš ï¸ {skipped_count} skipped (already assigned or wrong level).")
 
         return redirect('assign_subjects', user_id=user_id)
 
     # ===============================
-    # 🔥 SHOW SUBJECTS BY LEVEL (UI FIX)
+    # ðŸ”¥ SHOW SUBJECTS BY LEVEL (UI FIX)
     # ===============================
     subjects = Subject.objects.filter(is_active=True)
 
@@ -1403,17 +1930,17 @@ def select_subjects(request):
         student_class = request.POST.get('class')
 
         if not student_class:
-            messages.error(request, "❌ Please select a class!")
+            messages.error(request, "âŒ Please select a class!")
             return redirect('select_subjects')
 
         level = get_class_level(student_class)
 
         if not level:
-            messages.error(request, "❌ Invalid class selected!")
+            messages.error(request, "âŒ Invalid class selected!")
             return redirect('select_subjects')
 
         if not subject_ids:
-            messages.error(request, "❌ Select at least one subject!")
+            messages.error(request, "âŒ Select at least one subject!")
             return redirect('select_subjects')
 
         created_count = 0
@@ -1422,7 +1949,7 @@ def select_subjects(request):
         for subject_id in subject_ids:
             subject = Subject.objects.get(id=subject_id)
 
-            # 🔥 BLOCK WRONG LEVEL
+            # ðŸ”¥ BLOCK WRONG LEVEL
             if subject.level != level:
                 skipped_count += 1
                 continue
@@ -1449,15 +1976,15 @@ def select_subjects(request):
                 teacher=request.user,
                 subject=subject,
                 student_class=student_class,
-                level=level  # 🔥 IMPORTANT
+                level=level  # ðŸ”¥ IMPORTANT
             )
 
             created_count += 1
 
         if created_count > 0:
-            messages.success(request, f"✅ {created_count} request(s) sent!")
+            messages.success(request, f"âœ… {created_count} request(s) sent!")
         if skipped_count > 0:
-            messages.info(request, f"ℹ️ {skipped_count} skipped.")
+            messages.info(request, f"â„¹ï¸ {skipped_count} skipped.")
 
         return redirect('select_subjects')
 
@@ -1507,6 +2034,10 @@ def remove_subject(request, subject_id):
 # ===============================
 @login_required
 def admin_remove_subject(request, id):
+
+    if not is_academic_admin(request.user):
+        messages.error(request, "Access denied! Admins only.")
+        return redirect('academic_users')
 
     subject = get_object_or_404(TeacherSubject, id=id)
 
@@ -1614,7 +2145,7 @@ def reject_request(request, request_id):
 def admin_results_overview(request):
 
     # ===============================
-    # 🔐 ACCESS CONTROL
+    # ðŸ” ACCESS CONTROL
     # ===============================
     is_admin = request.user.is_superuser or UserModule.objects.filter(
         user=request.user,
@@ -1628,7 +2159,7 @@ def admin_results_overview(request):
         return redirect('academic_dashboard')
 
     # ===============================
-    # 📊 BASE DATA
+    # ðŸ“Š BASE DATA
     # ===============================
     exams = Exam.objects.all().order_by('-created_at')
     classes = ['Form 1','Form 2','Form 3','Form 4','Form 5','Form 6']
@@ -1642,14 +2173,14 @@ def admin_results_overview(request):
     all_uploaded = False
 
     # ===============================
-    # 🎯 MAIN LOGIC
+    # ðŸŽ¯ MAIN LOGIC
     # ===============================
     if selected_exam_id and selected_class:
 
         selected_exam = get_object_or_404(Exam, id=selected_exam_id)
 
         # ===============================
-        # 🎯 GET STUDENTS
+        # ðŸŽ¯ GET STUDENTS
         # ===============================
         students = Student.objects.filter(
             student_class=selected_class,
@@ -1659,10 +2190,10 @@ def admin_results_overview(request):
         total_students = students.count()
 
         # ===============================
-        # 🎯 GET SUBJECTS (FIXED PROPERLY)
+        # ðŸŽ¯ GET SUBJECTS (FIXED PROPERLY)
         # ===============================
         if selected_exam.level == 'A':
-            # A-LEVEL → based on combinations
+            # A-LEVEL â†’ based on combinations
             combo_names = students.values_list('section', flat=True).distinct()
 
             subjects = Subject.objects.filter(
@@ -1672,14 +2203,14 @@ def admin_results_overview(request):
             ).distinct()
 
         else:
-            # O-LEVEL → ONLY O subjects (NO A-level contamination)
+            # O-LEVEL â†’ ONLY O subjects (NO A-level contamination)
             subjects = Subject.objects.filter(
                 level='O',
                 is_active=True
             ).distinct()
 
         # ===============================
-        # 🎯 PROCESS SUBJECT STATUS
+        # ðŸŽ¯ PROCESS SUBJECT STATUS
         # ===============================
         all_uploaded = True
         subjects_status = []
@@ -1708,11 +2239,47 @@ def admin_results_overview(request):
                 student__in=subject_students
             ).values('student').distinct().count()
 
+            submission = MarkSubmission.objects.filter(
+                exam=selected_exam,
+                subject=subject,
+                student_class=selected_class
+            ).first()
+
+            subject_marks = StudentMark.objects.filter(
+                exam=selected_exam,
+                subject=subject,
+                student__in=subject_students
+            ).select_related('paper')
+
+            per_student = {}
+            for mark in subject_marks:
+                current = per_student.setdefault(mark.student_id, {'marks': 0.0, 'max': 0.0, 'absent': False})
+                if mark.is_absent:
+                    current['absent'] = True
+                    continue
+                current['marks'] += mark.marks
+                current['max'] += mark.paper.max_marks if mark.paper else 100
+
+            percentages = [
+                (item['marks'] / item['max']) * 100
+                for item in per_student.values()
+                if item['max'] > 0 and not item['absent']
+            ]
+            average_score = round(sum(percentages) / len(percentages), 2) if percentages else None
+            if average_score is None:
+                average_grade = '-'
+            elif selected_exam.level == 'A':
+                average_grade = get_alevel_grade(average_score)[0]
+            else:
+                average_grade = get_olevel_grade(average_score)[0]
+
             # ===============================
             # STATUS LOGIC
             # ===============================
             has_any = uploaded_count > 0
-            is_complete = uploaded_count == subject_total and subject_total > 0
+            is_marked_for_all = uploaded_count == subject_total and subject_total > 0
+            is_submitted = bool(submission and submission.is_submitted)
+            is_complete = is_marked_for_all and is_submitted
 
             if not is_complete:
                 all_uploaded = False
@@ -1723,17 +2290,25 @@ def admin_results_overview(request):
                 'total': subject_total,
                 'remaining': subject_total - uploaded_count,
                 'is_uploaded': is_complete,
+                'is_marked_for_all': is_marked_for_all,
+                'is_submitted': is_submitted,
+                'submitted_at': submission.submitted_at if submission else None,
                 'has_any_marks': has_any,
-                'percentage': int((uploaded_count / subject_total) * 100) if subject_total > 0 else 0
+                'percentage': int((uploaded_count / subject_total) * 100) if subject_total > 0 else 0,
+                'average_score': average_score,
+                'average_grade': average_grade,
             })
 
         # ===============================
-        # 📊 RESULTS DATA
+        # ðŸ“Š RESULTS DATA
         # ===============================
-        results = Result.objects.filter(
-            exam=selected_exam,
-            student__student_class=selected_class
-        ).order_by('position')
+        if all_uploaded:
+            results = Result.objects.filter(
+                exam=selected_exam,
+                student__student_class=selected_class
+            ).order_by('position')
+        else:
+            results = Result.objects.none()
 
         results_data = {
             'results': results,
@@ -1745,7 +2320,7 @@ def admin_results_overview(request):
         }
 
     # ===============================
-    # 🎯 RENDER
+    # ðŸŽ¯ RENDER
     # ===============================
     return render(request, 'academic/admin_results_overview.html', {
         'exams': exams,
@@ -1814,38 +2389,37 @@ def admin_view_class_marks(request, exam_id, student_class, subject_id):
     papers = Paper.objects.filter(subject=subject).order_by('paper_number')
     is_advanced = exam.level == 'A' and papers.exists()
     
-    # Get existing marks
+    # Get existing marks in one query instead of per student/paper
+    marks_index = {
+        (mark.student_id, mark.paper_id): mark
+        for mark in StudentMark.objects.filter(
+            exam=exam,
+            subject=subject,
+            student__in=students
+        )
+    }
+
     marks_data = []
     total_uploaded = 0
-    
+
     for student in students:
         student_marks = {}
         if is_advanced:
             for paper in papers:
-                mark = StudentMark.objects.filter(
-                    student=student,
-                    exam=exam,
-                    subject=subject,
-                    paper=paper
-                ).first()
+                mark = marks_index.get((student.id, paper.id))
                 if mark:
                     total_uploaded += 1
                     student_marks[f'paper_{paper.paper_number}'] = "ABS" if mark.is_absent else mark.marks
                 else:
                     student_marks[f'paper_{paper.paper_number}'] = "Not uploaded"
         else:
-            mark = StudentMark.objects.filter(
-                student=student,
-                exam=exam,
-                subject=subject,
-                paper=None
-            ).first()
+            mark = marks_index.get((student.id, None))
             if mark:
                 total_uploaded += 1
                 student_marks['marks'] = "ABS" if mark.is_absent else mark.marks
             else:
                 student_marks['marks'] = "Not uploaded"
-        
+
         marks_data.append({
             'student': student,
             'marks': student_marks
@@ -1865,6 +2439,8 @@ def admin_view_class_marks(request, exam_id, student_class, subject_id):
         'total_expected': len(students) * (len(papers) if is_advanced else 1),
         'upload_percentage': round(upload_percentage, 2)
     })
+
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -1872,10 +2448,12 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.template.loader import render_to_string
+
+
 @login_required
 def manage_teacher_subjects(request):
 
-    # 🔐 Admin check
+    # ðŸ” Admin check
     if not request.user.is_superuser:
         user_module = UserModule.objects.filter(
             user=request.user,
@@ -1887,35 +2465,45 @@ def manage_teacher_subjects(request):
             messages.error(request, "Access denied. Admin only.")
             return redirect('academic_dashboard')
 
-    # 🎯 Filters
+    # ðŸŽ¯ Filters
     filter_class = request.GET.get('class')
     filter_subject = request.GET.get('subject')
     filter_teacher = request.GET.get('teacher')
     filter_level = request.GET.get('level')
+    query = request.GET.get('q', '').strip()
     page_number = request.GET.get('page', 1)
 
     # Get subjects and classes for filters
     subjects = Subject.objects.filter(is_active=True)
     classes = ACADEMIC_CLASSES
 
-    # 📦 Get TeacherSubject objects directly (NOT dictionaries)
+    # ðŸ“¦ Get TeacherSubject objects directly (NOT dictionaries)
     assignments = TeacherSubject.objects.filter(is_active=True)\
         .select_related('teacher', 'subject')
 
     # Apply filters
-    if filter_class:
+    if filter_class and filter_class != 'None':
         assignments = assignments.filter(student_class=filter_class)
-    if filter_subject:
+    if filter_subject and filter_subject != 'None':
         assignments = assignments.filter(subject_id=filter_subject)
-    if filter_teacher:
+    if filter_teacher and filter_teacher != 'None':
         assignments = assignments.filter(teacher_id=filter_teacher)
-    if filter_level:
+    if filter_level and filter_level != 'None':
         assignments = assignments.filter(level=filter_level)
+    if query:
+        assignments = assignments.filter(
+            Q(teacher__username__icontains=query) |
+            Q(teacher__first_name__icontains=query) |
+            Q(teacher__last_name__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(subject__code__icontains=query) |
+            Q(student_class__icontains=query)
+        )
 
     # Order by teacher name then subject
     assignments = assignments.order_by('teacher__first_name', 'teacher__last_name', 'subject__name')
 
-    # 📄 Paginate assignments directly (10 per page)
+    # ðŸ“„ Paginate assignments directly (10 per page)
     paginator = Paginator(assignments, 10)
     page_obj = paginator.get_page(page_number)
 
@@ -1942,6 +2530,7 @@ def manage_teacher_subjects(request):
         'filter_subject': filter_subject,
         'filter_teacher': filter_teacher,
         'filter_level': filter_level,
+        'query': query,
         'users_list': all_users,
     })
 
@@ -1993,7 +2582,7 @@ def edit_teacher_assignment(request, assignment_id):
             # Notify teacher
             create_notification(
                 assignment.teacher,
-                f"❌ Your assignment for {assignment.subject.name} ({assignment.student_class}) has been removed."
+                f"âŒ Your assignment for {assignment.subject.name} ({assignment.student_class}) has been removed."
             )
             
             messages.success(request, f"Removed {assignment.subject.name} from {assignment.teacher.get_full_name()}")
@@ -2027,7 +2616,7 @@ def edit_teacher_assignment(request, assignment_id):
                     # Notify teacher
                     create_notification(
                         assignment.teacher,
-                        f"🔄 Your {assignment.subject.name} class changed to {new_class}"
+                        f"ðŸ”„ Your {assignment.subject.name} class changed to {new_class}"
                     )
                     
                     messages.success(request, f"Updated class to {new_class}")
@@ -2045,7 +2634,7 @@ def edit_teacher_assignment(request, assignment_id):
 def bulk_assign_subjects(request):
 
     # ===============================
-    # 🔒 ADMIN CHECK
+    # ðŸ”’ ADMIN CHECK
     # ===============================
     if not request.user.is_superuser:
         user_module = UserModule.objects.filter(
@@ -2060,7 +2649,7 @@ def bulk_assign_subjects(request):
             return redirect('academic_dashboard')
 
     # ===============================
-    # 📥 POST
+    # ðŸ“¥ POST
     # ===============================
     if request.method == 'POST':
 
@@ -2087,7 +2676,7 @@ def bulk_assign_subjects(request):
             for subject_id in subject_ids:
                 subject = get_object_or_404(Subject, id=subject_id)
 
-                # 🚫 STRICT LEVEL MATCH
+                # ðŸš« STRICT LEVEL MATCH
                 if subject.level != level:
                     skipped += 1
                     continue
@@ -2125,7 +2714,7 @@ def bulk_assign_subjects(request):
         return redirect('manage_teacher_subjects')
 
     # ===============================
-    # 📊 GET
+    # ðŸ“Š GET
     # ===============================
     teachers = User.objects.filter(
         usermodule__module__name='academic',
@@ -2148,7 +2737,7 @@ from registration.models import Student
 @login_required
 def class_results_view(request):
     # ===============================
-    # 📌 GET PUBLISHED EXAMS ONLY
+    # ðŸ“Œ GET PUBLISHED EXAMS ONLY
     # ===============================
     exams = Exam.objects.filter(is_published=True).order_by('-created_at')
 
@@ -2165,24 +2754,24 @@ def class_results_view(request):
     subjects = []
 
     # ===============================
-    # 🚀 MAIN LOGIC
+    # ðŸš€ MAIN LOGIC
     # ===============================
     if selected_exam_id and selected_class:
         selected_exam = get_object_or_404(Exam, id=selected_exam_id)
 
-        # ✅ GET STUDENTS FOR THIS CLASS ONLY
+        # âœ… GET STUDENTS FOR THIS CLASS ONLY
         students = Student.objects.filter(
             student_class=selected_class,
             school_status='Active',
             is_archived=False
         )
 
-        # ✅ FILTER ONLY STUDENTS WHO HAVE MARKS
+        # âœ… FILTER ONLY STUDENTS WHO HAVE MARKS
         students = students.filter(
             studentmark__exam=selected_exam
         ).distinct()
 
-        # ❌ if no students → stop early
+        # âŒ if no students â†’ stop early
         if not students.exists():
             return render(request, 'academic/class_results.html', {
                 'exams': exams,
@@ -2194,7 +2783,7 @@ def class_results_view(request):
             })
 
         # ===============================
-        # 📚 GET SUBJECTS
+        # ðŸ“š GET SUBJECTS
         # ===============================
         subjects = Subject.objects.filter(
             studentmark__exam=selected_exam,
@@ -2202,20 +2791,19 @@ def class_results_view(request):
         ).distinct()
 
         # ===============================
-        # 🧮 RANK STUDENTS
+        # ðŸ§® RANK STUDENTS
         # ===============================
         ranked = rank_students(students, selected_exam)
 
         for r in ranked:
-            res = calculate_student_result(r["student"], selected_exam)
 
-            # ❌ skip empty students
-            if all(sub["grade"] == "-" for sub in res["subjects"]):
+            # âŒ skip empty students
+            if all(sub["grade"] == "-" for sub in r["subjects"]):
                 continue
 
-            # ✅ BUILD GRADES DICTIONARY (IMPORTANT FIX)
+            # âœ… BUILD GRADES DICTIONARY (IMPORTANT FIX)
             grades_dict = {}
-            for sub in res["subjects"]:
+            for sub in r["subjects"]:
                 grades_dict[sub["subject"].id] = sub["grade"]
 
             students_data.append({
@@ -2223,11 +2811,12 @@ def class_results_view(request):
                 'position': r["position"],
                 'division': r["division"],
                 'total_points': r["points"],
+                'is_complete': r["is_complete"],
                 'grades': grades_dict
             })
 
     # ===============================
-    # 📤 RETURN
+    # ðŸ“¤ RETURN
     # ===============================
     return render(request, 'academic/class_results.html', {
         'exams': exams,
@@ -2250,6 +2839,10 @@ from registration.models import Student
 def download_class_pdf(request, exam_id):
     exam = get_object_or_404(Exam, id=exam_id)
 
+    # 🔐 ACCESS CONTROL
+    if not exam.is_published and not request.user.is_staff:
+        return redirect('academic_dashboard')
+
     students = Student.objects.filter(
         studentmark__exam=exam
     ).distinct()
@@ -2259,10 +2852,8 @@ def download_class_pdf(request, exam_id):
     students_data = []
 
     for r in ranked:
-        res = calculate_student_result(r["student"], exam)
-
         # skip empty students
-        if all(sub["grade"] in ["-", "ABS"] for sub in res["subjects"]):
+        if all(sub["grade"] in ["-", "ABS"] for sub in r["subjects"]):
             continue
 
         students_data.append({
@@ -2270,7 +2861,7 @@ def download_class_pdf(request, exam_id):
             'position': r["position"],
             'division': r["division"],
             'points': r["points"],
-            'subjects_data': res["subjects"]
+            'subjects_data': r["subjects"]
         })
 
     subjects = []
@@ -2281,7 +2872,8 @@ def download_class_pdf(request, exam_id):
     html = template.render({
         'exam': exam,
         'students_data': students_data,
-        'subjects': subjects
+        'subjects': subjects,
+        'logo_path': str(settings.BASE_DIR / 'static' / 'images' / 'school_logo.png'),
     })
 
     response = HttpResponse(content_type='application/pdf')
@@ -2290,4 +2882,3 @@ def download_class_pdf(request, exam_id):
     pisa.CreatePDF(html, dest=response)
 
     return response
-

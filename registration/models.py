@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+import uuid
 
 
 class Equipment(models.Model):
@@ -7,6 +8,12 @@ class Equipment(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name'], name='reg_equipment_name_idx'),
+        ]
 
 
 class Student(models.Model):
@@ -116,6 +123,14 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.registration_number} - {self.first_name}"
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['student_class', 'school_status', 'is_archived'], name='reg_student_class_status_idx'),
+            models.Index(fields=['student_class', 'section', 'school_status', 'is_archived'], name='reg_student_class_section_idx'),
+            models.Index(fields=['first_name', 'last_name'], name='reg_student_name_idx'),
+            models.Index(fields=['created_at'], name='reg_student_created_idx'),
+        ]
+
     # ================= HELPER METHODS =================
 
     def archive(self):
@@ -167,3 +182,80 @@ class Student(models.Model):
         if self.student_class in ['Form 5', 'Form 6']:
             if self.section not in self.SECTION_ADVANCED:
                 raise ValidationError("A-Level must use combinations")
+
+
+class StudentClassHistory(models.Model):
+    # PROTECT — promotion/graduation history must survive a Student
+    # hard-delete rather than vanishing silently with it.
+    student = models.ForeignKey(Student, on_delete=models.PROTECT, related_name='class_history')
+    from_class = models.CharField(max_length=20)
+    to_class = models.CharField(max_length=20)
+    from_section = models.CharField(max_length=10, blank=True)
+    to_section = models.CharField(max_length=10, blank=True)
+    academic_year = models.CharField(max_length=20)
+    changed_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+    changed_at = models.DateTimeField(auto_now_add=True)
+    note = models.CharField(max_length=255, blank=True)
+    batch = models.ForeignKey(
+        'PromotionBatch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='history_records'
+    )
+
+    class Meta:
+        ordering = ['-changed_at']
+        indexes = [
+            models.Index(fields=['student', 'changed_at'], name='reg_history_student_time_idx'),
+            models.Index(fields=['academic_year', 'from_class', 'to_class'], name='reg_history_year_classes_idx'),
+            models.Index(fields=['batch', 'changed_at'], name='reg_history_batch_time_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.student.registration_number}: {self.from_class} to {self.to_class}"
+
+
+class PromotionBatch(models.Model):
+    ACTION_PROMOTION = 'promotion'
+    ACTION_GRADUATION = 'graduation'
+    ACTION_MIXED = 'mixed'
+
+    ACTION_CHOICES = [
+        (ACTION_PROMOTION, 'Promotion'),
+        (ACTION_GRADUATION, 'Graduation'),
+        (ACTION_MIXED, 'Mixed Promotion and Graduation'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    academic_year = models.CharField(max_length=20)
+    action_type = models.CharField(max_length=20, choices=ACTION_CHOICES, default=ACTION_PROMOTION)
+    selected_classes = models.JSONField(default=list, blank=True)
+    promoted_count = models.PositiveIntegerField(default=0)
+    graduated_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_reverted = models.BooleanField(default=False)
+    reverted_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reverted_promotion_batches'
+    )
+    reverted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['academic_year', 'created_at'], name='reg_promobatch_year_time_idx'),
+            models.Index(fields=['is_reverted', 'created_at'], name='reg_promobatch_reverted_idx'),
+        ]
+
+    @property
+    def total_changed(self):
+        return self.promoted_count + self.graduated_count
+
+    def __str__(self):
+        return f"{self.academic_year} promotion batch {self.id}"

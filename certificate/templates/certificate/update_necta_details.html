@@ -1,0 +1,69 @@
+{% extends 'certificate/base.html' %}
+
+{% block title %}Receive NECTA Documents{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-heading">
+        <div>
+            <h1>Receive NECTA Documents</h1>
+            <p>{{ student.registration_number }} - {{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</p>
+        </div>
+        <a href="{% url 'certificate:graduates_list' %}" class="btn ghost">
+            <i class="fas fa-arrow-left"></i> Graduates
+        </a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="split-grid">
+            <section class="module-card">
+                <h3>Certificate</h3>
+                <label class="form-label">NECTA Certificate Number</label>
+                <input type="text" name="cert_no" class="form-control" value="{{ collection.necta_certificate_no|default_if_none:'' }}">
+
+                <label class="form-label" style="margin-top:14px;">
+                    <input type="checkbox" name="cert_received" {% if collection.certificate_received_at_school %}checked{% endif %}>
+                    Received at school
+                </label>
+
+                <label class="form-label" style="margin-top:14px;">If not received, reason</label>
+                <input type="text" name="cert_unavailable_reason" class="form-control" value="{{ collection.certificate_unavailable_reason }}" placeholder="Example: Not issued by NECTA">
+
+                {% if collection.certificate_collected %}
+                    <p class="muted">This certificate is already marked as collected.</p>
+                {% endif %}
+            </section>
+
+            <section class="module-card">
+                <h3>Result Slip</h3>
+                <label class="form-label">NECTA Result Slip Number</label>
+                <input type="text" name="result_no" class="form-control" value="{{ collection.necta_result_slip_no|default_if_none:'' }}">
+
+                <label class="form-label" style="margin-top:14px;">
+                    <input type="checkbox" name="result_received" {% if collection.result_slip_received_at_school %}checked{% endif %}>
+                    Received at school
+                </label>
+
+                <label class="form-label" style="margin-top:14px;">If not received, reason</label>
+                <input type="text" name="result_unavailable_reason" class="form-control" value="{{ collection.result_unavailable_reason }}" placeholder="Example: Pending from NECTA">
+
+                {% if collection.result_slip_collected %}
+                    <p class="muted">This result slip is already marked as collected.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <section class="module-card" style="margin-top:14px;">
+            <h3>Office Notes</h3>
+            <textarea name="notes" rows="4" class="form-control">{{ collection.notes }}</textarea>
+            <div class="actions-row" style="margin-top:16px;">
+                <button type="submit" class="btn success">
+                    <i class="fas fa-save"></i> Save Received Documents
+                </button>
+                <a href="{% url 'certificate:graduates_list' %}" class="btn secondary">Cancel</a>
+            </div>
+        </section>
+    </form>
+</div>
+{% endblock %}

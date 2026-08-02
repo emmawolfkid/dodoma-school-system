@@ -5,56 +5,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - School Management System</title>
-    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}?v=2">
 </head>
 <body>
 
-<div class="auth-container">
+<div class="auth-page">
+    <div class="auth-container">
 
-    <div class="auth-header">
-        <h1>🏫 Welcome Back</h1>
-        <p>Login to access your dashboard</p>
-    </div>
-
-    <div class="auth-body">
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <!-- 🔥 LOGIN NOTICE -->
-        <div class="help-text" style="margin-bottom:10px;">
-            🔒 Only approved users can login
+        <!-- ===================== HEADER ===================== -->
+        <div class="auth-header">
+            <div class="auth-logo-wrapper">
+                <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="auth-logo">
+            </div>
+            <p class="auth-school-name">School Management System</p>
+            <h1>🏫 Welcome Back</h1>
+            <p>Login to access your dashboard</p>
         </div>
 
-        <form method="post">
-            {% csrf_token %}
+        <!-- ===================== BODY ===================== -->
+        <div class="auth-body">
 
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" placeholder="Enter your username" required>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="notice-box notice-info">
+                🔒 Only approved users can login
             </div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" placeholder="Enter your password" required>
-            </div>
+            <form method="post">
+                {% csrf_token %}
 
-            <button type="submit" class="btn-submit">🔓 Login</button>
-        </form>
+                <div class="form-group">
+                    <label for="id_username">Username</label>
+                    <input type="text" id="id_username" name="username" placeholder="Enter your username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_password">Password</label>
+                    <input type="password" id="id_password" name="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn-submit">🔓 Login</button>
+            </form>
+
+        </div>
+
+        <!-- ===================== FOOTER ===================== -->
+        <hr class="auth-footer-divider">
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{% url 'signup' %}">Sign up here</a></p>
+        </div>
+        <div class="auth-footer">
+            <p>Forgot your password? <a href="{% url 'password_reset' %}">Reset it here</a></p>
+        </div>
 
     </div>
-
-    <div class="auth-footer">
-        <p>Don't have an account? 
-            <a href="{% url 'signup' %}">Sign up here</a>
-        </p>
-    </div>
-
 </div>
 
 </body>

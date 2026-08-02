@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Module - Dodoma School</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f1f5f9;
+        }
+        
+        /* Layout */
+        .audit-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .audit-sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        /* Mobile sidebar hidden by default */
+        @media (max-width: 768px) {
+            .audit-sidebar {
+                transform: translateX(-100%);
+            }
+            .audit-sidebar.open {
+                transform: translateX(0);
+            }
+            .audit-content {
+                margin-left: 0 !important;
+            }
+        }
+        
+        /* Desktop sidebar always visible */
+        @media (min-width: 769px) {
+            .audit-sidebar {
+                transform: translateX(0) !important;
+            }
+        }
+        
+        .audit-sidebar-header {
+            text-align: center;
+            padding: 1.5rem;
+            border-bottom: 2px solid #334155;
+        }
+        
+        .audit-sidebar-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            margin: 0 auto 0.5rem;
+            display: block;
+        }
+        
+        .audit-sidebar-header h2 {
+            font-size: 1.25rem;
+        }
+        
+        .audit-sidebar-nav {
+            padding: 1rem;
+        }
+        
+        .audit-sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #cbd5e1;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .audit-sidebar-nav a:hover,
+        .audit-sidebar-nav a.active {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .audit-sidebar-nav hr {
+            margin: 1rem 0;
+            border-color: #334155;
+        }
+        
+        /* Main Content */
+        .audit-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 1.5rem;
+            min-height: 100vh;
+            width: 100%;
+        }
+        
+        /* Mobile Header with Toggle Button */
+        .mobile-header {
+            display: none;
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .menu-toggle {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+        
+        .mobile-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+            .audit-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="audit-layout">
+    
+    <!-- Overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <div class="audit-sidebar" id="auditSidebar">
+        <div class="audit-sidebar-header">
+            <img src="{% static 'images/school_logo.png' %}" alt="Logo" class="audit-sidebar-logo" onerror="this.style.display='none'">
+            <h2>🔍 Audit Trail</h2>
+        </div>
+        
+        <div class="audit-sidebar-nav">
+            <a href="{% url 'audit:audit_dashboard' %}" class="{% if request.resolver_match.url_name == 'audit_dashboard' %}active{% endif %}">
+                📊 Dashboard
+            </a>
+            <a href="{% url 'audit:audit_logs' %}" class="{% if request.resolver_match.url_name == 'audit_logs' %}active{% endif %}">
+                📜 Audit Logs
+            </a>
+            
+            <hr>
+            <a href="{% url 'dashboard' %}">
+                ⬅ Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="audit-content">
+        <!-- Mobile Header with Toggle Button -->
+        <div class="mobile-header">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <span class="mobile-title">Audit Module</span>
+        </div>
+        
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('auditSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    }
+    
+    function closeSidebar() {
+        const sidebar = document.getElementById('auditSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    }
+    
+    // Close sidebar when clicking a link on mobile
+    document.querySelectorAll('.audit-sidebar-nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

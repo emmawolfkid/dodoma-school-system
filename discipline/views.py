@@ -3,12 +3,14 @@ from django.db.models import Sum, Count, Q
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
+from django.db import transaction
 
 from .models import DisciplineCase, DisciplineAuditLog, SuspensionRecord
 from .forms import DisciplineCaseForm, SuspensionForm   # ✅ FIXED
 from .decorators import discipline_permission_required
 from django.utils.timezone import now
 from registration.models import Student
+from audit.services import log_action  # ✅ Already present
 
 # ✅ OPTIONAL SAFE IMPORT (prevents crash if reportlab missing)
 try:
@@ -84,33 +86,47 @@ def add_case(request, student_id):
 
         if form.is_valid():
             action_taken = form.cleaned_data.get('action_taken')
-            
-            # Create the case
-            case = form.save(commit=False)
-            case.student = student
-            case.reported_by = request.user
-            case.action_type = action_taken  # Map to model's action_type
-            case.action_taken = action_taken.capitalize()  # Store the action description
-            case.save()
 
-            # 🔥 HANDLE SUSPENSION - only if action is suspension
-            if action_taken == 'suspension':
-                # Validate suspension fields before saving
-                if suspension_form.validate_for_suspension():
+            # 🔒 Case + suspension must land together — a failure partway
+            # through must not leave a 'suspension' case with no SuspensionRecord.
+            if action_taken == 'suspension' and not suspension_form.validate_for_suspension():
+                messages.error(request, "Suspension details are required and must be valid.")
+                return render(request, 'discipline/add_case.html', {
+                    'form': form,
+                    'suspension_form': suspension_form,
+                    'student': student
+                })
+
+            with transaction.atomic():
+                # Create the case
+                case = form.save(commit=False)
+                case.student = student
+                case.reported_by = request.user
+                case.action_type = action_taken  # Map to model's action_type
+                case.action_taken = action_taken.capitalize()  # Store the action description
+                case.save()
+
+                # 🔥 STEP 2 — ADD LOG AFTER case.save()
+                log_action(
+                    user=request.user,
+                    action='create',
+                    instance=case,
+                    module='discipline',
+                    changes={
+                        "student": str(case.student),
+                        "case_type": case.case_type,
+                        "action": case.action_taken
+                    }
+                )
+
+                # 🔥 HANDLE SUSPENSION - only if action is suspension
+                if action_taken == 'suspension':
                     suspension = suspension_form.save(commit=False)
                     suspension.case = case
                     suspension.save()
-                else:
-                    # Delete the case we just created since suspension failed
-                    case.delete()
-                    messages.error(request, "Suspension details are required and must be valid.")
-                    return render(request, 'discipline/add_case.html', {
-                        'form': form,
-                        'suspension_form': suspension_form,
-                        'student': student
-                    })
 
-            student.update_school_status()
+                student.update_school_status()
+
             messages.success(request, "Case added successfully.")
             return redirect('discipline:student_profile', student_id=student.id)
 
@@ -169,8 +185,23 @@ def resolve_case(request, case_id):
 
     case = get_object_or_404(DisciplineCase, id=case_id)
 
+    if case.status == 'resolved':
+        messages.info(request, "Case is already resolved.")
+        return redirect('discipline:all_cases')
+
     case.status = 'resolved'
     case.save()
+
+    # 🔥 STEP 3 — ADD LOG AFTER case.save()
+    log_action(
+        user=request.user,
+        action='update',
+        instance=case,
+        module='discipline',
+        changes={
+            "status": "resolved"
+        }
+    )
 
     DisciplineAuditLog.objects.create(
         case=case,
@@ -200,41 +231,56 @@ def edit_case(request, case_id):
 
         if form.is_valid():
             action_taken = form.cleaned_data.get('action_taken')
-            
-            # Update case fields
-            case = form.save(commit=False)
-            case.action_type = action_taken
-            case.action_taken = action_taken.capitalize()
-            case.save()
 
-            # 🔥 HANDLE SUSPENSION
-            if action_taken == 'suspension':
-                # Validate suspension is complete
-                if suspension_form.validate_for_suspension():
+            # 🔒 Validate suspension details before touching the case, so a
+            # failed validation never leaves a partially-updated case behind.
+            if action_taken == 'suspension' and not suspension_form.validate_for_suspension():
+                messages.error(request, "Suspension details are required and must be valid.")
+                return render(request, 'discipline/add_case.html', {
+                    'form': form,
+                    'suspension_form': suspension_form,
+                    'student': case.student,
+                    'is_edit': True
+                })
+
+            with transaction.atomic():
+                # Update case fields
+                case = form.save(commit=False)
+                case.action_type = action_taken
+                case.action_taken = action_taken.capitalize()
+                case.save()
+
+                # 🔥 STEP 4 — ADD LOG AFTER case.save()
+                log_action(
+                    user=request.user,
+                    action='update',
+                    instance=case,
+                    module='discipline',
+                    changes={
+                        "edited": True,
+                        "action": case.action_taken
+                    }
+                )
+
+                # 🔥 HANDLE SUSPENSION
+                if action_taken == 'suspension':
                     suspension = suspension_form.save(commit=False)
                     suspension.case = case
                     suspension.save()
                 else:
-                    messages.error(request, "Suspension details are required and must be valid.")
-                    return render(request, 'discipline/add_case.html', {
-                        'form': form,
-                        'suspension_form': suspension_form,
-                        'student': case.student,
-                        'is_edit': True
-                    })
-            else:
-                # ❗ If not suspension → delete existing suspension
-                if suspension:
-                    suspension.delete()
+                    # ❗ If not suspension → delete existing suspension
+                    if suspension:
+                        suspension.delete()
 
-            # 🔥 LOG
-            DisciplineAuditLog.objects.create(
-                case=case,
-                action='updated',
-                performed_by=request.user
-            )
+                # 🔥 LOG
+                DisciplineAuditLog.objects.create(
+                    case=case,
+                    action='updated',
+                    performed_by=request.user
+                )
 
-            case.student.update_school_status()
+                case.student.update_school_status()
+
             messages.success(request, "Case updated successfully.")
             return redirect('discipline:student_profile', student_id=case.student.id)
 
@@ -263,8 +309,23 @@ def archive_case(request, case_id):
 
     case = get_object_or_404(DisciplineCase, id=case_id)
 
+    if case.is_archived:
+        messages.info(request, "Case is already archived.")
+        return redirect('discipline:all_cases')
+
     case.is_archived = True
     case.save()
+
+    # 🔥 STEP 5 — ADD LOG AFTER case.save()
+    log_action(
+        user=request.user,
+        action='update',
+        instance=case,
+        module='discipline',
+        changes={
+            "archived": True
+        }
+    )
 
     DisciplineAuditLog.objects.create(
         case=case,
@@ -273,14 +334,31 @@ def archive_case(request, case_id):
     )
 
     return redirect('discipline:all_cases')
+
+
 @require_POST
 @discipline_permission_required('edit')
 def restore_case(request, case_id):
 
     case = get_object_or_404(DisciplineCase, id=case_id)
 
+    if not case.is_archived:
+        messages.info(request, "Case is not archived.")
+        return redirect('discipline:all_cases')
+
     case.is_archived = False
     case.save()
+
+    # 🔥 STEP 6 — ADD LOG AFTER case.save()
+    log_action(
+        user=request.user,
+        action='update',
+        instance=case,
+        module='discipline',
+        changes={
+            "restored": True
+        }
+    )
 
     DisciplineAuditLog.objects.create(
         case=case,
@@ -345,6 +423,8 @@ def students_by_class(request, class_name):
         'students': students,
         'class_name': class_name
     })
+
+
 # 🔥 ALL CASES PDF (RESTORED - DO NOT REMOVE AGAIN)
 @discipline_permission_required('view')
 def all_cases_report(request):
@@ -387,6 +467,7 @@ def all_cases_report(request):
 
     return response
 
+
 @require_POST
 @discipline_permission_required('edit')
 def mark_returned(request, case_id):
@@ -397,6 +478,17 @@ def mark_returned(request, case_id):
         suspension = case.suspension
         suspension.actual_return_date = now().date()
         suspension.save()
+
+        # 🔥 STEP 7 — ADD LOG AFTER suspension.save()
+        log_action(
+            user=request.user,
+            action='update',
+            instance=case,
+            module='discipline',
+            changes={
+                "returned": True
+            }
+        )
 
         messages.success(request, "Student marked as returned.")
 

@@ -7,5 +7,3 @@ class AcademicConfig(AppConfig):
 
     def ready(self):
         import academic.signals
-        from .models import AcademicYear
-        AcademicYear.get_current_year()

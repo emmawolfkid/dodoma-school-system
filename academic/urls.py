@@ -6,6 +6,7 @@ urlpatterns = [
     # DASHBOARD
     path('', views.academic_dashboard, name='academic_home'),  # This makes /academic/ work
     path('dashboard/', views.academic_dashboard, name='academic_dashboard'),
+    path('notifications/read/', views.mark_notifications_read, name='mark_notifications_read'),
 
     # TEACHER
     path('subjects/', views.teacher_subjects, name='teacher_subjects'),
@@ -23,10 +24,12 @@ urlpatterns = [
     # RESULTS
     path('class-results/<int:exam_id>/<str:student_class>/', views.class_results, name='class_results'),
     path('student-result/<int:exam_id>/<int:student_id>/', views.student_result_detail, name='student_result_detail'),
+    path('transcripts/', views.transcript_center, name='transcript_center'),
+    path('transcripts/<int:student_id>/download/', views.download_student_transcript, name='download_student_transcript'),
 
     # PDF
     path('pdf/student/<int:exam_id>/<int:student_id>/', views.download_student_pdf, name='download_student_pdf'),
-    path('pdf/class/<int:exam_id>/<str:student_class>/', views.download_class_pdf, name='download_class_pdf'),
+    path('pdf/class/<int:exam_id>/<str:student_class>/', views.download_class_pdf_for_class, name='download_class_pdf_for_class'),
 
     # ADMIN USER MANAGEMENT (NEW 🔥)
     path('users/', views.academic_users, name='academic_users'),

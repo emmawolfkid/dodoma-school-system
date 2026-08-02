@@ -2,8 +2,10 @@
 .page-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 .page-header i {
@@ -48,28 +50,6 @@
 }
 
 
-/* BUTTONS */
-.btn {
-    padding: 5px 8px;
-    border-radius: 6px;
-    background: #ecf0f1;
-    color: #2c3e50;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-success {
-    background: var(--success-color);
-    color: white;
-}
-
-.btn-sm {
-    font-size: 12px;
-}
-
-
 /* EMPTY */
 .empty-state {
     text-align: center;
@@ -91,6 +71,11 @@
     .table-students td {
         font-size: 12px;
         padding: 8px;
+    }
+
+    .header-actions,
+    .header-actions .btn {
+        width: 100%;
     }
 
 }

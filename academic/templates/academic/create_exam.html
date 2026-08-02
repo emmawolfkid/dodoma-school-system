@@ -72,7 +72,7 @@
 
                         <option disabled>────────────</option>
 
-                        {% for c in "Form 1,Form 2,Form 3,Form 4,Form 5,Form 6".split(",") %}
+                        {% for c in classes_list %}
                         <option value="{{ c }}"
                             {% if exam and exam.student_class == c %}selected{% endif %}>
                             {{ c }}

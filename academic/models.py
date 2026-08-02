@@ -45,6 +45,10 @@ class Subject(models.Model):
 
     class Meta:
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['level', 'is_active'], name='acad_subj_level_active_idx'),
+            models.Index(fields=['name'], name='acad_subj_name_idx'),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -113,6 +117,11 @@ class Exam(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['level', 'student_class', 'academic_year'], name='acad_exam_level_class_year_idx'),
+            models.Index(fields=['is_published', 'is_locked'], name='acad_exam_pub_lock_idx'),
+            models.Index(fields=['created_at'], name='acad_exam_created_idx'),
+        ]
 
     def __str__(self):
         return f"{self.name} - {self.student_class or self.level} ({self.academic_year.year})"
@@ -128,6 +137,9 @@ class Paper(models.Model):
 
     class Meta:
         unique_together = ('subject', 'paper_number')
+        indexes = [
+            models.Index(fields=['subject', 'paper_number'], name='acad_paper_subject_no_idx'),
+        ]
 
     def __str__(self):
         return f"{self.subject.code} - Paper {self.paper_number}"
@@ -154,6 +166,11 @@ class TeacherSubject(models.Model):
 
     class Meta:
         unique_together = ('teacher', 'subject', 'student_class')
+        indexes = [
+            models.Index(fields=['teacher', 'is_active'], name='acad_ts_teacher_active_idx'),
+            models.Index(fields=['subject', 'student_class', 'is_active'], name='acad_ts_subject_class_idx'),
+            models.Index(fields=['level', 'student_class', 'is_active'], name='acad_ts_level_class_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         # 🔥 auto-sync level from subject
@@ -185,6 +202,11 @@ class TeacherSubjectRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['teacher', 'is_approved'], name='acad_tsr_teacher_appr_idx'),
+            models.Index(fields=['subject', 'student_class', 'is_approved'], name='acad_tsr_subject_class_idx'),
+            models.Index(fields=['created_at'], name='acad_tsr_created_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         self.level = self.subject.level
@@ -198,7 +220,9 @@ class TeacherSubjectRequest(models.Model):
 # STUDENT MARKS (CRITICAL FIX)
 # ===============================
 class StudentMark(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    # PROTECT: an accidental Student hard-delete must not silently wipe
+    # exam marks — archive the student instead of deleting.
+    student = models.ForeignKey(Student, on_delete=models.PROTECT)
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
 
@@ -222,7 +246,27 @@ class StudentMark(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('student', 'exam', 'subject', 'paper')
+        # unique_together on a nullable FK doesn't work on Postgres (NULL != NULL),
+        # so paper=None rows (O-Level, single mark per subject) aren't protected by it.
+        # Two conditional constraints cover both cases explicitly.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['student', 'exam', 'subject', 'paper'],
+                name='acad_mark_unique_with_paper',
+                condition=models.Q(paper__isnull=False),
+            ),
+            models.UniqueConstraint(
+                fields=['student', 'exam', 'subject'],
+                name='acad_mark_unique_without_paper',
+                condition=models.Q(paper__isnull=True),
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['exam', 'subject'], name='acad_mark_exam_subject_idx'),
+            models.Index(fields=['student', 'exam'], name='acad_mark_student_exam_idx'),
+            models.Index(fields=['exam', 'subject', 'paper'], name='acad_mark_exam_subj_paper_idx'),
+            models.Index(fields=['uploaded_by', 'updated_at'], name='acad_mark_uploader_time_idx'),
+        ]
 
     def __str__(self):
         return f"{self.student} - {self.subject} - {self.marks}"
@@ -232,7 +276,9 @@ class StudentMark(models.Model):
 # RESULT
 # ===============================
 class Result(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    # PROTECT — see StudentMark above; official results must not vanish
+    # silently on a Student hard-delete.
+    student = models.ForeignKey(Student, on_delete=models.PROTECT)
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
 
     total_points = models.IntegerField(default=0)
@@ -244,6 +290,10 @@ class Result(models.Model):
 
     class Meta:
         ordering = ['position']
+        indexes = [
+            models.Index(fields=['exam', 'position'], name='acad_result_exam_pos_idx'),
+            models.Index(fields=['student', 'exam'], name='acad_result_student_exam_idx'),
+        ]
 
     def __str__(self):
         return f"{self.student} - {self.division}"
@@ -262,6 +312,9 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', 'created_at'], name='acad_notif_user_read_idx'),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.message[:20]}"
@@ -278,6 +331,11 @@ class MarkSubmission(models.Model):
 
     class Meta:
         unique_together = ('exam', 'subject', 'student_class')
+        indexes = [
+            models.Index(fields=['exam', 'student_class'], name='acad_submit_exam_class_idx'),
+            models.Index(fields=['subject', 'student_class'], name='acad_submit_subject_class_idx'),
+            models.Index(fields=['is_submitted', 'submitted_at'], name='acad_submit_status_time_idx'),
+        ]
 
     def __str__(self):
         return f"{self.subject} - {self.student_class} - {self.exam}"

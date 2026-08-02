@@ -1,12 +1,21 @@
+import re
+
 from django import forms
 from .models import Student, Equipment
+
+# Tanzanian mobile numbers: 07XXXXXXXX / 06XXXXXXXX or +255 7XXXXXXXX / +255 6XXXXXXXX
+PHONE_PATTERN = re.compile(r'^(0[67]\d{8}|\+255[67]\d{8})$')
 
 
 class StudentForm(forms.ModelForm):
     class Meta:
         model = Student
-        fields = '__all__'
-        
+        # is_archived/archived_at are system-managed via Student.archive()/
+        # restore() (gated on the stricter 'delete' permission) — excluding
+        # them here stops a plain 'edit'-permission user from archiving a
+        # student by just posting is_archived=on through this form.
+        exclude = ['is_archived', 'archived_at']
+
         widgets = {
             'gender': forms.Select(attrs={'class': 'form-control'}),
             'student_class': forms.Select(attrs={'class': 'form-control', 'id': 'id_student_class'}),
@@ -33,6 +42,21 @@ class StudentForm(forms.ModelForm):
             'nearby_person_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '07XXXXXXXX'}),
         }
     
+    def _clean_phone(self, field_name):
+        value = self.cleaned_data.get(field_name, '').strip()
+        if value and not PHONE_PATTERN.match(value):
+            raise forms.ValidationError("Enter a valid phone number, e.g. 07XXXXXXXX or +2557XXXXXXXX.")
+        return value
+
+    def clean_parent_phone(self):
+        return self._clean_phone('parent_phone')
+
+    def clean_parent_phone2(self):
+        return self._clean_phone('parent_phone2')
+
+    def clean_nearby_person_phone(self):
+        return self._clean_phone('nearby_person_phone')
+
     def clean(self):
         cleaned_data = super().clean()
         student_class = cleaned_data.get('student_class')

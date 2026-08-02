@@ -55,6 +55,36 @@
 .profile-actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+.profile-stats {
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    padding: 18px 20px;
+}
+
+.info-grid div {
+    padding: 12px;
+    border: 1px solid #e5edf5;
+    border-radius: 8px;
+    background: #f8fbff;
+}
+
+.info-grid span,
+.info-grid strong {
+    display: block;
+}
+
+.info-grid span {
+    color: #777;
+    font-size: 12px;
+    margin-bottom: 4px;
 }
 
 /* 🔷 CARD */
@@ -149,31 +179,6 @@
 }
 
 /* 🔷 BUTTONS */
-.btn {
-    padding: 6px 10px;
-    border-radius: 6px;
-    background: #ecf0f1;
-    color: #2c3e50;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-success {
-    background: var(--success-color);
-    color: white;
-}
-
-.btn-secondary {
-    background: #bdc3c7;
-    color: white;
-}
-
-.btn-sm {
-    font-size: 12px;
-}
-
 /* 🔷 EMPTY STATE */
 .empty-state {
     text-align: center;
@@ -231,7 +236,11 @@
 
     .profile-actions {
         width: 100%;
-        justify-content: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-actions .btn {
+        width: 100%;
     }
 
     .history-table th,

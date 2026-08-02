@@ -5,74 +5,61 @@
 {% block title %}View Students{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'registration/css/view_students.css' %}">
+<link rel="stylesheet" href="{% static 'registration/css/view_students.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">📚 Student Directory</h1>
+    <h1 class="page-title">Student Directory</h1>
     <div class="header-actions">
-        <a href="{% url 'register_student' %}" class="btn btn-primary">
-            ➕ Add New Student
-        </a>
-        <a href="{% url 'archived_students' %}" class="btn btn-warning">
-            📦 Archived Students
-        </a>
+        <a href="{% url 'register_student' %}" class="btn btn-primary">Add Student</a>
+        <a href="{% url 'import_students' %}" class="btn btn-secondary">Import Excel</a>
+        <a href="{% url 'promote_students' %}" class="btn btn-warning">Promote Students</a>
+        <a href="{% url 'archived_students' %}" class="btn btn-warning">Archived</a>
     </div>
 </div>
 
-<!-- Class Navigation -->
 <div class="class-navigation">
-    <h3>Quick Class Navigation</h3>
-    
-    {% if o_level_classes %}
+    <h3>Classes</h3>
     <div class="level-section">
-        <h4>O-Level Classes</h4>
+        <h4>O-Level</h4>
         <div class="class-links">
             {% for class in o_level_classes %}
-                <a href="?view_mode=class&selected_class={{ class }}" 
+                <a href="?selected_class={{ class }}&search={{ search_query }}"
                    class="{% if selected_class == class %}active{% endif %}">
-                    {{ class }}
-                    <span class="class-count">({{ class_counts|get_item:class }})</span>
+                    {{ class }} <span class="class-count">({{ class_counts|get_item:class }})</span>
                 </a>
             {% endfor %}
         </div>
     </div>
-    {% endif %}
-    
-    {% if a_level_classes %}
     <div class="level-section">
-        <h4>A-Level Classes</h4>
+        <h4>A-Level</h4>
         <div class="class-links">
             {% for class in a_level_classes %}
-                <a href="?view_mode=class&selected_class={{ class }}" 
+                <a href="?selected_class={{ class }}&search={{ search_query }}"
                    class="{% if selected_class == class %}active{% endif %}">
-                    {{ class }}
-                    <span class="class-count">({{ class_counts|get_item:class }})</span>
+                    {{ class }} <span class="class-count">({{ class_counts|get_item:class }})</span>
                 </a>
             {% endfor %}
         </div>
     </div>
-    {% endif %}
-    
     <div class="view-all">
-        <a href="?view_mode=all" class="{% if view_mode == 'all' %}active{% endif %}">
-            📋 View All Students ({{ total_students }})
+        <a href="{% url 'view_students' %}" class="{% if not selected_class and not has_filters %}active{% endif %}">
+            All Students ({{ total_students }})
         </a>
     </div>
 </div>
 
-<!-- Search and Filter -->
 <div class="card filter-card">
     <form method="get" class="filter-form">
+        <input type="hidden" name="selected_class" value="{{ selected_class }}">
         <div class="form-row">
             <div class="form-group">
-                <label>Search Term:</label>
-                <input type="text" name="search" value="{{ search_query }}" 
-                       placeholder="Name, reg number, phone...">
+                <label>Search</label>
+                <input type="search" name="search" value="{{ search_query }}" placeholder="Name, reg no, parent, phone, region">
             </div>
             <div class="form-group">
-                <label>Filter By:</label>
+                <label>Filter By</label>
                 <select name="filter_field">
                     <option value="">All Fields</option>
                     <option value="registration_number" {% if filter_field == 'registration_number' %}selected{% endif %}>Registration Number</option>
@@ -87,14 +74,13 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Value:</label>
-                <input type="text" name="filter_value" value="{{ filter_value }}" 
-                       placeholder="Enter value...">
+                <label>Value</label>
+                <input type="text" name="filter_value" value="{{ filter_value }}" placeholder="Exact or partial value">
             </div>
             <div class="form-group">
                 <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary">🔍 Search</button>
-                {% if has_filters %}
+                <button type="submit" class="btn btn-primary">Search</button>
+                {% if has_filters or selected_class %}
                     <a href="{% url 'view_students' %}" class="btn btn-secondary">Clear</a>
                 {% endif %}
             </div>
@@ -102,134 +88,97 @@
     </form>
 </div>
 
-<!-- Download Section - PDF Only - FIXED VERSION -->
 <div class="card download-card">
     <form method="GET" action="{% url 'download_students_pdf' %}" target="_blank">
         <div class="form-row">
             <div class="form-group">
-                <label>Select Class:</label>
+                <label>Download Class Report</label>
                 <select name="class">
-                    <option value="all">📋 All Classes ({{ total_students }} students)</option>
+                    <option value="all">All Classes ({{ total_students }})</option>
                     {% for class in o_level_classes %}
-                        <option value="{{ class }}">{{ class }} ({{ class_counts|get_item:class }} students)</option>
+                        <option value="{{ class }}">{{ class }} ({{ class_counts|get_item:class }})</option>
                     {% endfor %}
                     {% for class in a_level_classes %}
-                        <option value="{{ class }}">{{ class }} ({{ class_counts|get_item:class }} students)</option>
+                        <option value="{{ class }}">{{ class }} ({{ class_counts|get_item:class }})</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary">
-                    📥 Download PDF
-                </button>
+                <button type="submit" class="btn btn-primary">Download</button>
             </div>
         </div>
     </form>
 </div>
 
-<!-- Student Display - All Students View -->
-{% if view_mode == 'all' %}
-    <div class="education-level-section">
-        <h2>All Students ({{ all_students|length }})</h2>
-        
-        <div class="table-responsive">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Photo</th>
-                        <th>Reg No</th>
-                        <th>Name</th>
-                        <th>Class</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in all_students %}
-                    <tr>
-                        <td class="photo-cell">
-                            {% if student.profile_photo %}
-                                <img src="{{ student.profile_photo.url }}" alt="Photo" 
-                                     style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-                            {% else %}
-                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
-                                    👤
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td>{{ student.registration_number }}</td>
-                        <td>{{ student.first_name }} {{ student.middle_name|default:'' }} {{ student.last_name }}</td>
-                        <td>{{ student.student_class }} {{ student.section }}</td>
-                        <td>
-                            <span class="badge badge-{{ student.school_status|lower }}">
-                                {{ student.school_status|default:"Active" }}
-                            </span>
-                        </td>
-                        <td class="action-cell">
-                            <a href="{% url 'student_detail' student.id %}" class="btn-action view-btn">👁️</a>
-                            <a href="{% url 'archive_student' student.id %}" class="btn-action archive-btn" 
-                               onclick="return confirm('Archive this student?')">📦</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+<div class="education-level-section">
+    <div class="class-summary">
+        <h3>
+            {% if selected_class %}{{ selected_class }}{% else %}Students{% endif %}
+            ({{ page_obj.paginator.count }} found)
+        </h3>
     </div>
 
-<!-- Student Display - Class-wise View -->
-{% else %}
-    {% for class_name, students_data in students_by_class.items %}
-        <div class="education-level-section">
-            <div class="class-summary">
-                <h3>{{ class_name }} ({{ students_data|length }} students)</h3>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Photo</th>
-                            <th>Reg No</th>
-                            <th>Name</th>
-                            <th>Section</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for student in students_data %}
-                        <tr>
-                            <td class="photo-cell">
-                                {% if student.profile_photo %}
-                                    <img src="{{ student.profile_photo.url }}" alt="Photo" 
-                                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-                                {% else %}
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
-                                        👤
-                                    </div>
-                                {% endif %}
-                            </td>
-                            <td>{{ student.registration_number }}</td>
-                            <td>{{ student.first_name }} {{ student.middle_name|default:'' }} {{ student.last_name }}</td>
-                            <td>{{ student.section }}</td>
-                            <td>
-                                <span class="badge badge-{{ student.school_status|lower }}">
-                                    {{ student.school_status|default:"Active" }}
-                                </span>
-                            </td>
-                            <td class="action-cell">
-                                <a href="{% url 'student_detail' student.id %}" class="btn-action view-btn">👁️</a>
-                                <a href="{% url 'archive_student' student.id %}" class="btn-action archive-btn"
-                                   onclick="return confirm('Archive this student?')">📦</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    {% endfor %}
-{% endif %}
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Reg No</th>
+                    <th>Name</th>
+                    <th>Class</th>
+                    <th>Section</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td class="photo-cell">
+                        {% if student.profile_photo %}
+                            <img src="{{ student.profile_photo.url }}" alt="Photo" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                        {% else %}
+                            <div class="student-avatar">{{ student.first_name|slice:":1"|upper }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ student.registration_number }}</td>
+                    <td>{{ student.first_name }} {{ student.middle_name|default:'' }} {{ student.last_name }}</td>
+                    <td>{{ student.student_class }}</td>
+                    <td>{{ student.section }}</td>
+                    <td><span class="badge badge-{{ student.school_status|lower }}">{{ student.school_status|default:"Active" }}</span></td>
+                    <td class="action-cell">
+                        <a href="{% url 'student_detail' student.id %}" class="btn-action view-btn" title="View">View</a>
+                        {% if can_edit_students %}
+                            <a href="{% url 'edit_student' student.id %}" class="btn-action edit-btn" title="Edit">Edit</a>
+                        {% endif %}
+                        {% if can_delete_students %}
+                            <form method="post" action="{% url 'archive_student' student.id %}" style="display:inline;" onsubmit="return confirm('Archive this student?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-action archive-btn">Archive</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">No students found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?selected_class={{ selected_class }}&search={{ search_query }}&filter_field={{ filter_field }}&filter_value={{ filter_value }}&page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?selected_class={{ selected_class }}&search={{ search_query }}&filter_field={{ filter_field }}&filter_value={{ filter_value }}&page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

@@ -2,136 +2,97 @@
 {% load custom_tags %}
 
 {% block content %}
-<div style="max-width: 1200px; margin:auto; padding:20px;">
+<div class="page-shell">
+    <div class="page-header">
+        <h2>Enter Marks</h2>
+        <p>{{ subject.name }} ({{ subject.code }}) for {{ student_class }}</p>
+    </div>
 
-<h2>📝 Enter Marks - {{ subject.name }} ({{ student_class }})</h2>
+    <div class="info-panel">
+        <p><strong>Exam:</strong> {{ exam.name }} | <strong>Year:</strong> {{ exam.academic_year.year }} | <strong>Students:</strong> {{ students|length }}</p>
+    </div>
 
-<p>
-<strong>Exam:</strong> {{ exam.name }} |
-<strong>Year:</strong> {{ exam.academic_year.year }} |
-<strong>Students:</strong> {{ students|length }}
-</p>
-
-<!-- EXAM LOCK -->
-{% if exam.is_locked %}
-<div style="background:#f8d7da; padding:10px; margin-bottom:10px;">
-    🔒 Exam locked (No editing allowed)
-</div>
-{% endif %}
-
-<form method="POST">
-{% csrf_token %}
-
-<div style="overflow-x:auto;">
-<table border="1" cellpadding="6" style="width:100%; border-collapse:collapse;">
-
-<tr style="background:#4CAF50;color:white;">
-    <th>#</th>
-    <th>Name</th>
-    <th>Reg</th>
-
-    {% if is_advanced %}
-        {% for p in papers %}
-            <th>P{{ p.paper_number }}</th>
-        {% endfor %}
+    {% if exam.is_locked %}
+        <div class="notice-box">This exam is locked. Marks are read-only.</div>
     {% else %}
-        <th>Marks</th>
+        <p>
+            <a href="{% url 'upload_marks_excel' exam.id subject.id student_class %}" class="btn warning">Upload Excel for this subject</a>
+        </p>
     {% endif %}
 
-    <th>Total</th>
-    <th>Grade</th>
-</tr>
+    <form method="POST">
+        {% csrf_token %}
 
-{% for student in students %}
-<tr>
+        <div class="table-panel table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Reg No</th>
+                        {% if is_advanced %}
+                            {% for p in papers %}
+                                <th>P{{ p.paper_number }}<br><small>Max {{ p.max_marks|floatformat:"-2" }}</small></th>
+                            {% endfor %}
+                        {% else %}
+                            <th>Marks</th>
+                        {% endif %}
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ student.first_name }} {{ student.last_name }}</td>
+                        <td>{{ student.registration_number }}</td>
 
-<td>{{ forloop.counter }}</td>
-<td>{{ student.first_name }} {{ student.last_name }}</td>
-<td>{{ student.registration_number }}</td>
+                        {% if is_advanced %}
+                            {% for p in papers %}
+                                {% with student_id=student.id|stringformat:"s" paper_no=p.paper_number|stringformat:"s" %}
+                                {% with key=student_id|add:"_p"|add:paper_no %}
+                                <td>
+                                    <input type="text"
+                                           name="marks_{{ student.id }}_p{{ p.paper_number }}"
+                                           value="{{ marks_dict|get_item:key|default:'' }}"
+                                           {% if exam.is_locked %}readonly{% endif %}
+                                           style="width:72px;text-align:center;">
+                                </td>
+                                {% endwith %}
+                                {% endwith %}
+                            {% endfor %}
+                        {% else %}
+                            {% with key=student.id|stringformat:"s" %}
+                            <td>
+                                <input type="text"
+                                       name="marks_{{ student.id }}"
+                                       value="{{ marks_dict|get_item:key|default:'' }}"
+                                       {% if exam.is_locked %}readonly{% endif %}
+                                       style="width:82px;text-align:center;">
+                            </td>
+                            {% endwith %}
+                        {% endif %}
 
-<!-- ========================= -->
-<!-- ✅ A-LEVEL (FIXED FINAL) -->
-<!-- ========================= -->
-{% if is_advanced %}
+                        <td>{{ student_totals|get_item:student.id|default:0 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">No eligible students found for this subject and class.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-    {% for p in papers %}
-        {% with key=student.id|stringformat:"s"|add:"_p"|add:p.paper_number|stringformat:"s" %}
-        <td>
-            <input type="text"
-                name="marks_{{ student.id }}_p{{ p.paper_number }}"
-                value="{{ marks_dict|get_item:key|default:'' }}"
-                {% if exam.is_locked %}readonly{% endif %}
-                style="width:60px;text-align:center;">
-        </td>
-        {% endwith %}
-    {% endfor %}
+        <div class="actions-row">
+            {% if not exam.is_locked %}
+                <button type="submit" name="action" value="save">Save</button>
+                <button type="submit" name="action" value="submit" onclick="return confirm('Submit marks? You can still edit until exam is locked.')">Submit</button>
+            {% endif %}
+            <a href="{% url 'select_exam' subject.id student_class %}" class="btn secondary">Back</a>
+        </div>
+    </form>
 
-{% else %}
-
-<!-- ========================= -->
-<!-- ✅ O-LEVEL -->
-<!-- ========================= -->
-    {% with key=student.id|stringformat:"s" %}
-    <td>
-        <input type="text"
-            name="marks_{{ student.id }}"
-            value="{{ marks_dict|get_item:key|default:'' }}"
-            {% if exam.is_locked %}readonly{% endif %}
-            style="width:80px;text-align:center;">
-    </td>
-    {% endwith %}
-
-{% endif %}
-
-<!-- ========================= -->
-<!-- TOTAL -->
-<!-- ========================= -->
-<td>
-    {{ student_totals|get_item:student.id|default:0 }}
-</td>
-
-<!-- ========================= -->
-<!-- GRADE -->
-
-
-</tr>
-{% endfor %}
-
-</table>
-</div>
-
-<br>
-
-<!-- ========================= -->
-<!-- ACTION BUTTONS -->
-<!-- ========================= -->
-<div style="display:flex; gap:10px; flex-wrap:wrap;">
-
-{% if not exam.is_locked %}
-<button type="submit" name="action" value="save"
-    style="background:#4CAF50;color:white;padding:10px;border:none;">
-    💾 Save
-</button>
-
-<button type="submit" name="action" value="submit"
-    onclick="return confirm('Submit marks? You can still edit until exam is locked.')"
-    style="background:#2196F3;color:white;padding:10px;border:none;">
-    📤 Submit
-</button>
-{% endif %}
-
-<a href="{% url 'select_exam' subject.id student_class %}"
-   style="padding:10px;background:#6c757d;color:white;text-decoration:none;">
-   ⬅ Back
-</a>
-
-</div>
-
-</form>
-
-<p style="margin-top:10px;">
-💡 Tip: Enter <strong>ABS</strong> for absent student
-</p>
-
+    <p class="notice-box" style="margin-top:14px;">Tip: enter <strong>ABS</strong> for an absent student.</p>
 </div>
 {% endblock %}

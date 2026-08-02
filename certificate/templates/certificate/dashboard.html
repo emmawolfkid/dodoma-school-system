@@ -1,0 +1,100 @@
+{% extends 'certificate/base.html' %}
+
+{% block title %}Certificate Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-heading">
+        <div>
+            <h1>Graduate Records Center</h1>
+            <p>Receive NECTA certificates and result slips, then verify student collection.</p>
+        </div>
+        <div class="actions-row">
+            <a href="{% url 'certificate:graduates_list' %}" class="btn">
+                <i class="fas fa-user-graduate"></i> Graduates
+            </a>
+            <a href="{% url 'certificate:graduates_list' %}?status=available" class="btn ghost">
+                <i class="fas fa-box-open"></i> Received
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <strong>{{ total_graduates }}</strong>
+            <span>Total graduates</span>
+        </div>
+        <div class="stat-card">
+            <strong>{{ certificate_available }}</strong>
+            <span>Certificates at school</span>
+        </div>
+        <div class="stat-card">
+            <strong>{{ result_slip_available }}</strong>
+            <span>Result slips at school</span>
+        </div>
+        <div class="stat-card">
+            <strong>{{ none_collected }}</strong>
+            <span>Waiting collection</span>
+        </div>
+        <div class="stat-card">
+            <strong>{{ both_collected }}</strong>
+            <span>Both collected</span>
+        </div>
+    </div>
+
+    <div class="split-grid">
+        <div class="module-card">
+            <h3>Receive Documents</h3>
+            <p>Open the graduates list, choose a Form 4 or Form 6 group, then record certificate and result slip numbers for each graduate.</p>
+            <div class="actions-row">
+                <a href="{% url 'certificate:graduates_list' %}" class="btn success">
+                    <i class="fas fa-plus"></i> Enter Received Documents
+                </a>
+            </div>
+        </div>
+
+        <div class="module-card">
+            <h3>Verify Collection</h3>
+            <p>When a graduate arrives, search their name or registration number, confirm the document number, and mark only the document collected.</p>
+            <div class="actions-row">
+                <a href="{% url 'certificate:graduates_list' %}?status=available" class="btn ghost">
+                    <i class="fas fa-check-circle"></i> Ready for Collection
+                </a>
+                <a href="{% url 'certificate:graduates_list' %}?status=none" class="btn ghost">
+                    <i class="fas fa-clock"></i> Not Collected
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Graduation Groups</h2>
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Group</th>
+                    <th>Graduates</th>
+                    <th>Open</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for group in graduation_groups %}
+                <tr>
+                    <td><strong>{{ group.from_class }} {{ group.academic_year }}</strong></td>
+                    <td>{{ group.total }}</td>
+                    <td>
+                        <a href="{% url 'certificate:graduates_list' %}?year={{ group.academic_year }}&level={{ group.from_class }}" class="btn btn-sm">
+                            Open Group
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="muted">No graduation records yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

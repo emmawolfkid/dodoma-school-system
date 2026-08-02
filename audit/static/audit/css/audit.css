@@ -1,0 +1,363 @@
+/* audit/static/audit/css/audit.css */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Layout */
+.audit-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.audit-sidebar {
+    width: 260px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: white;
+    padding: 1.5rem;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.audit-sidebar-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #334155;
+}
+
+.audit-sidebar-header h2 {
+    font-size: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.audit-sidebar-logo {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto;
+}
+
+.audit-sidebar-nav {
+    margin-top: 1rem;
+}
+
+.audit-sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #cbd5e1;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+
+.audit-sidebar-nav a:hover {
+    background: #334155;
+    color: white;
+}
+
+.audit-sidebar-nav a.active {
+    background: #4f46e5;
+    color: white;
+}
+
+.audit-sidebar-nav hr {
+    margin: 1rem 0;
+    border-color: #334155;
+}
+
+/* Main Content */
+.audit-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 1.5rem;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Header Section */
+.audit-header {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.audit-header h1 {
+    font-size: 1.75rem;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+
+.audit-header p {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+/* Stats Cards */
+.audit-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.stat-card h3 {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #4f46e5;
+}
+
+/* Filter Bar */
+.audit-filters {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.filter-form {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+}
+
+.filter-group input,
+.filter-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.btn {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #64748b;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+/* Table */
+.audit-table-container {
+    background: white;
+    border-radius: 12px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.audit-table thead {
+    background: #f1f5f9;
+}
+
+.audit-table th {
+    padding: 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.audit-table td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.audit-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Action Badges */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-create {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-update {
+    background: #fed7aa;
+    color: #9a3412;
+}
+
+.badge-delete {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Details Toggle */
+details summary {
+    cursor: pointer;
+    color: #4f46e5;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+details pre {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Pagination */
+.audit-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 1rem;
+}
+
+.audit-pagination a {
+    padding: 0.5rem 1rem;
+    background: white;
+    color: #4f46e5;
+    text-decoration: none;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.audit-pagination a:hover {
+    background: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .audit-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 1rem;
+    }
+    
+    .audit-content {
+        margin-left: 0;
+    }
+    
+    .audit-layout {
+        flex-direction: column;
+    }
+    
+    .filter-form {
+        flex-direction: column;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .audit-table th,
+    .audit-table td {
+        padding: 0.625rem;
+        font-size: 0.75rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+}

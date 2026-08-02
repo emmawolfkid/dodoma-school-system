@@ -52,6 +52,11 @@
     margin-top: 3px;
 }
 
+.restore-form {
+    display: inline-flex;
+    margin: 0;
+}
+
 .btn-restore {
     padding: 6px 16px;
     background: #10b981;
@@ -59,6 +64,9 @@
     text-decoration: none;
     border-radius: 6px;
     font-size: 0.85rem;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
     transition: all 0.2s;
 }
 

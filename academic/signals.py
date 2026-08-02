@@ -34,6 +34,7 @@ def create_default_academic_data(sender, **kwargs):
         {"name": "Economics", "code": "ECO_A", "level": "A", "is_core": True},
         {"name": "Computer Science", "code": "CSC_A", "level": "A", "is_core": True},
         {"name": "Kiswahili", "code": "KIS_A", "level": "A", "is_core": True},
+        {"name": "Language", "code": "LAN_A", "level": "A", "is_core": True},
 
         {"name": "General Studies", "code": "GS_A", "level": "A", "is_core": False},
         {"name": "Basic Applied Mathematics", "code": "BAM_A", "level": "A", "is_core": False},
@@ -51,8 +52,8 @@ def create_default_academic_data(sender, **kwargs):
         "PCB": ["PHY_A", "CHE_A", "BIO_A", "GS_A"],
         "EGM": ["ECO_A", "GEO_A", "PMT_A", "GS_A"],
         "CBG": ["CHE_A", "BIO_A", "GEO_A", "GS_A"],
+        "HGK": ["HIS_A", "GEO_A", "KIS_A", "GS_A"],
         "HGL": ["HIS_A", "GEO_A", "LAN_A", "GS_A"],
-        "HGL": ["HIS_A", "GEO_A", "ENG_A", "GS_A"],
     }
 
     for combo_name, subject_codes in combinations_data.items():
@@ -63,52 +64,51 @@ def create_default_academic_data(sender, **kwargs):
             if subject:
                 combo.subjects.add(subject)   # ✅ SAFE
 
- # ===============================
-# 🔥 CREATE PAPERS (FINAL CLEAN)
-# ===============================
+    # ===============================
+    # 🔥 CREATE PAPERS (FINAL CLEAN)
 
-def create_papers(subject_code, papers):
-    subject = Subject.objects.filter(code=subject_code).first()
-    if not subject:
-        return
+    def create_papers(subject_code, papers):
+        subject = Subject.objects.filter(code=subject_code).first()
+        if not subject:
+            return
 
-    for p in papers:
-        Paper.objects.get_or_create(
-            subject=subject,
-            paper_number=p["number"],
-            defaults={"max_marks": p["marks"]}
-        )
+        for p in papers:
+            Paper.objects.get_or_create(
+                subject=subject,
+                paper_number=p["number"],
+                defaults={"max_marks": p["marks"]}
+            )
 
-# 🔬 SCIENCES (3 papers)
-for code in ["PHY_A", "CHE_A", "BIO_A", "CSC_A"]:
-    create_papers(code, [
-        {"number": 1, "marks": 100},
-        {"number": 2, "marks": 100},
-        {"number": 3, "marks": 50},
-    ])
+    # 🔬 SCIENCES (3 papers)
+    for code in ["PHY_A", "CHE_A", "BIO_A", "CSC_A"]:
+        create_papers(code, [
+            {"number": 1, "marks": 100},
+            {"number": 2, "marks": 100},
+            {"number": 3, "marks": 50},
+        ])
 
-# 🧮 PURE MATH (2 papers ONLY)
-create_papers("PMT_A", [
-    {"number": 1, "marks": 100},
-    {"number": 2, "marks": 100},
-])
-
-# 🌍 ARTS (2 papers)
-for code in ["HIS_A", "GEO_A", "ECO_A"]:
-    create_papers(code, [
+    # 🧮 PURE MATH (2 papers ONLY)
+    create_papers("PMT_A", [
         {"number": 1, "marks": 100},
         {"number": 2, "marks": 100},
     ])
 
-# 🗣 LANGUAGES (2 papers)
-for code in ["LAN_A", "KIS_A"]:
-    create_papers(code, [
-        {"number": 1, "marks": 100},
-        {"number": 2, "marks": 100},
-    ])
+    # 🌍 ARTS (2 papers)
+    for code in ["HIS_A", "GEO_A", "ECO_A"]:
+        create_papers(code, [
+            {"number": 1, "marks": 100},
+            {"number": 2, "marks": 100},
+        ])
 
-# 📘 COMPULSORY (1 paper)
-for code in ["GS_A", "BAM_A"]:
-    create_papers(code, [
-        {"number": 1, "marks": 100},
-    ])
+    # 🗣 LANGUAGES (2 papers)
+    for code in ["LAN_A", "KIS_A"]:
+        create_papers(code, [
+            {"number": 1, "marks": 100},
+            {"number": 2, "marks": 100},
+        ])
+
+    # 📘 COMPULSORY (1 paper)
+    for code in ["GS_A", "BAM_A"]:
+        create_papers(code, [
+            {"number": 1, "marks": 100},
+        ])

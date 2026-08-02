@@ -1,12 +1,24 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <style>
         body { font-family: Arial, sans-serif; font-size: 10px; }
 
         h2, h3, p {
             text-align: center;
             margin: 3px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .logo img {
+            width: 62px;
+            height: 62px;
         }
 
         table {
@@ -36,6 +48,12 @@
     </style>
 </head>
 <body>
+
+{% if logo_path %}
+<div class="logo">
+    <img src="{{ logo_path }}" alt="School Logo">
+</div>
+{% endif %}
 
 <h2>DODOMA SECONDARY SCHOOL</h2>
 <h3>{{ exam.name }} RESULTS</h3>

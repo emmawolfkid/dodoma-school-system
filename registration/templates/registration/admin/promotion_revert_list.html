@@ -1,0 +1,65 @@
+{% extends 'registration/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-history"></i> Recent Promotion Batches</h2>
+        <a href="{% url 'view_students' %}" class="btn btn-secondary">Back to Students</a>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> This page shows groups of students moved at the same time. You can undo a specific batch if a mistake was made.
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle shadow-sm bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>Time of Action</th>
+                    <th>Performed By</th>
+                    <th>Academic Year</th>
+                    <th>Classes</th>
+                    <th>Students Changed</th>
+                    <th>Status</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in batches %}
+                <tr>
+                    <td>{{ batch.created_at|date:"M d, Y H:i" }}</td>
+                    <td><span class="badge bg-light text-dark">{{ batch.created_by.username|default:"Unknown" }}</span></td>
+                    <td>{{ batch.academic_year }}</td>
+                    <td>{{ batch.selected_classes|join:", " }}</td>
+                    <td>
+                        <strong>{{ batch.total_changed }}</strong> total
+                        <small class="text-muted d-block">{{ batch.promoted_count }} promoted, {{ batch.graduated_count }} graduated, {{ batch.skipped_count }} skipped</small>
+                    </td>
+                    <td>
+                        {% if batch.is_reverted %}
+                            <span class="badge bg-secondary">Reverted</span>
+                        {% else %}
+                            <span class="badge bg-success">Active</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if not batch.is_reverted %}
+                        <form method="POST" action="{% url 'undo_promotion_batch' %}" onsubmit="return confirm('PANIC BUTTON: Are you sure you want to REVERT these {{ batch.total_changed }} students? This cannot be undone.')">
+                            {% csrf_token %}
+                            <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm shadow-sm">
+                                <i class="fas fa-undo"></i> Undo Batch
+                            </button>
+                        </form>
+                        {% else %}
+                            <small class="text-muted">Done by {{ batch.reverted_by.username|default:"Unknown" }}</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center py-4">No recent promotion history found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

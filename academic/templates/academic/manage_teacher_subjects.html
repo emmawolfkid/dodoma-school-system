@@ -1,166 +1,111 @@
 {% extends "academic/base.html" %}
 
 {% block content %}
-<div style="max-width: 1400px; margin:auto; padding:20px;">
+<div class="page-shell">
+    <div class="page-header">
+        <h2>Teacher Subject Management</h2>
+        <p>Search, filter, and manage teacher assignments across levels and classes.</p>
+    </div>
 
-<!-- HEADER -->
-<div style="background:#667eea; color:white; padding:20px; border-radius:10px;">
-    <h2>👥 Teacher Subject Management</h2>
-    <a href="{% url 'bulk_assign_subjects' %}" style="color:white;">📦 Bulk Assign</a>
+    <div class="stats-grid">
+        <div class="stat-card"><strong>{{ stats.total_users }}</strong><span>Academic Users</span></div>
+        <div class="stat-card"><strong>{{ stats.total_assignments }}</strong><span>Assignments</span></div>
+        <div class="stat-card"><strong>{{ stats.total_subjects_used }}</strong><span>Subjects Used</span></div>
+        <div class="stat-card"><strong>{{ stats.total_classes_used }}</strong><span>Classes Used</span></div>
+    </div>
+
+    <form method="get" class="filter-bar panel">
+        <label>
+            Search
+            <input type="search" name="q" value="{{ query }}" placeholder="Teacher, subject, code, class">
+        </label>
+        <label>
+            Class
+            <select name="class">
+                <option value="">All Classes</option>
+                {% for c in classes %}
+                    <option value="{{ c }}" {% if filter_class == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Subject
+            <select name="subject">
+                <option value="">All Subjects</option>
+                {% for s in subjects %}
+                    <option value="{{ s.id }}" {% if filter_subject|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Teacher
+            <select name="teacher">
+                <option value="">All Teachers</option>
+                {% for u in users_list %}
+                    <option value="{{ u.id }}" {% if filter_teacher|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Level
+            <select name="level">
+                <option value="">All Levels</option>
+                <option value="O" {% if filter_level == 'O' %}selected{% endif %}>O-Level</option>
+                <option value="A" {% if filter_level == 'A' %}selected{% endif %}>A-Level</option>
+            </select>
+        </label>
+        <button type="submit">Filter</button>
+        <a href="{% url 'bulk_assign_subjects' %}" class="btn warning">Bulk Assign</a>
+    </form>
+
+    <div class="table-panel table-wrapper">
+        {% if page_obj %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Teacher</th>
+                    <th>Subject</th>
+                    <th>Class</th>
+                    <th>Level</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ts in page_obj %}
+                <tr>
+                    <td><strong>{{ ts.teacher.get_full_name|default:ts.teacher.username }}</strong><br><small>{{ ts.teacher.email }}</small></td>
+                    <td>{{ ts.subject.name }}<br><small>{{ ts.subject.code }}</small></td>
+                    <td>{{ ts.student_class }}</td>
+                    <td>
+                        {% if ts.level == 'O' %}
+                            <span class="badge success">O-Level</span>
+                        {% else %}
+                            <span class="badge info">A-Level</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'edit_teacher_assignment' ts.id %}" class="btn ghost">Edit</a>
+                        <a href="{% url 'admin_remove_subject' ts.id %}" class="btn danger" onclick="return confirm('Remove assignment?')">Remove</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <div class="notice-box">No assignments found.</div>
+        {% endif %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?q={{ query }}&class={{ filter_class }}&subject={{ filter_subject }}&teacher={{ filter_teacher }}&level={{ filter_level }}&page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?q={{ query }}&class={{ filter_class }}&subject={{ filter_subject }}&teacher={{ filter_teacher }}&level={{ filter_level }}&page={{ page_obj.next_page_number }}">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
-
-<br>
-
-<!-- STATS -->
-<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
-    <div class="card">{{ stats.total_users }}<br>Users</div>
-    <div class="card">{{ stats.total_assignments }}<br>Assignments</div>
-    <div class="card">{{ stats.total_subjects_used }}<br>Subjects</div>
-    <div class="card">{{ stats.total_classes_used }}<br>Classes</div>
-</div>
-
-<br>
-
-<!-- FILTER -->
-<form method="GET">
-
-<select name="class">
-<option value="">All Classes</option>
-{% for c in classes %}
-<option value="{{ c }}" {% if filter_class == c %}selected{% endif %}>
-    {{ c }}
-</option>
-{% endfor %}
-</select>
-
-<select name="subject">
-<option value="">All Subjects</option>
-{% for s in subjects %}
-<option value="{{ s.id }}" {% if filter_subject|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
-    {{ s.name }}
-</option>
-{% endfor %}
-</select>
-
-<select name="teacher">
-<option value="">All Teachers</option>
-{% for u in users_list %}
-<option value="{{ u.id }}" {% if filter_teacher|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
-    {{ u.get_full_name|default:u.username }}
-</option>
-{% endfor %}
-</select>
-
-<!-- 🔥 NEW: LEVEL FILTER -->
-<select name="level">
-<option value="">All Levels</option>
-<option value="O" {% if request.GET.level == 'O' %}selected{% endif %}>O-Level</option>
-<option value="A" {% if request.GET.level == 'A' %}selected{% endif %}>A-Level</option>
-</select>
-
-<button type="submit">🔍 Filter</button>
-
-</form>
-
-<br>
-
-<!-- RESULTS -->
-<div class="table-wrapper">
-
-{% if page_obj %}
-
-<table>
-<tr>
-<th>Teacher</th>
-<th>Subject</th>
-<th>Class</th>
-<th>Level</th>
-<th>Action</th>
-</tr>
-
-{% for ts in page_obj %}
-<tr>
-
-<td>{{ ts.teacher.get_full_name|default:ts.teacher.username }}</td>
-
-<td>
-{{ ts.subject.name }} <br>
-<small>{{ ts.subject.code }}</small>
-</td>
-
-<td>{{ ts.student_class }}</td>
-
-<td>
-{% if ts.level == 'O' %}
-    <span style="color:green;">O-Level</span>
-{% else %}
-    <span style="color:blue;">A-Level</span>
-{% endif %}
-</td>
-
-<td>
-<a href="{% url 'admin_remove_subject' ts.id %}" 
-   style="color:red;"
-   onclick="return confirm('Remove assignment?')">
-   Remove
-</a>
-</td>
-
-</tr>
-{% endfor %}
-
-</table>
-
-{% else %}
-<div class="empty-box">
-No assignments found
-</div>
-{% endif %}
-
-</div>
-
-<!-- PAGINATION -->
-<div class="pagination">
-{% if page_obj.has_previous %}
-<a href="?page={{ page_obj.previous_page_number }}">⬅</a>
-{% endif %}
-
-Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-
-{% if page_obj.has_next %}
-<a href="?page={{ page_obj.next_page_number }}">➡</a>
-{% endif %}
-</div>
-
-</div>
-
-<style>
-.card {
-    background:white;
-    padding:15px;
-    border-left:5px solid #2563eb;
-}
-
-table {
-    width:100%;
-    border-collapse:collapse;
-}
-
-th, td {
-    padding:10px;
-    border-bottom:1px solid #ddd;
-}
-
-.empty-box {
-    background:white;
-    padding:30px;
-    text-align:center;
-}
-
-.pagination {
-    text-align:center;
-    margin-top:20px;
-}
-</style>
-
 {% endblock %}

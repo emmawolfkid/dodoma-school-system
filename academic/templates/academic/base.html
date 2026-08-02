@@ -1,192 +1,126 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>School System</title>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f7fa;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            width: 230px;
-            height: 100vh;
-            background: #2c3e50;
-            color: white;
-            position: fixed;
-            padding: 20px;
-        }
-
-        .sidebar h3 {
-            margin-bottom: 20px;
-        }
-
-        .sidebar a {
-            display: block;
-            color: #ecf0f1;
-            text-decoration: none;
-            margin: 10px 0;
-            padding: 8px;
-            border-radius: 5px;
-        }
-
-        .sidebar a:hover {
-            background: #34495e;
-        }
-
-        /* CONTENT */
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-        }
-
-        /* HEADER */
-        .topbar {
-            background: white;
-            padding: 10px 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* ALERTS */
-        .alert {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-
-        .alert-success { background: #2ecc71; color: white; }
-        .alert-error { background: #e74c3c; color: white; }
-        .alert-warning { background: #f39c12; color: white; }
-
-        /* POPUP */
-        .popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: black;
-            color: white;
-            padding: 12px;
-            border-radius: 5px;
-            display: none;
-            z-index: 1000;
-        }
-
-        /* BADGE */
-        .badge {
-            background: red;
-            padding: 3px 6px;
-            border-radius: 10px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic - School Management System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'academic/css/base.css' %}?v=1">
 </head>
-
 <body>
-<!-- SIDEBAR -->
-<div class="sidebar">
 
-    <h3>📚 Menu</h3>
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- DASHBOARD -->
-    <a href="{% url 'academic_dashboard' %}">🏠 Dashboard</a>
-
-    <!-- SUPERUSER LINKS -->
-    {% if request.user.is_superuser %}
-        <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
-        <a href="{% url 'academic_users' %}">👥 Manage Users</a>
-        <a href="{% url 'approve_subject_requests' %}">
-            📋 Subject Requests
-            {% if pending_requests > 0 %}
-                <span class="badge">{{ pending_requests }}</span>
-            {% endif %}
-        </a>
-        <a href="{% url 'manage_teacher_subjects' %}">👥 Teacher-Subject Management</a>
-        <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
-    {% endif %}
-
-    <!-- ACADEMIC ADMIN LINKS -->
-    {% for m in request.user.usermodel_set.all %}
-        {% if m.module.name == 'academic' and m.is_admin %}
-            <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
-            <a href="{% url 'academic_users' %}">👥 Manage Users</a>
-            <a href="{% url 'approve_subject_requests' %}">
-                📋 Subject Requests
-                {% if pending_requests > 0 %}
-                    <span class="badge">{{ pending_requests }}</span>
-                {% endif %}
-            </a>
-            <a href="{% url 'manage_teacher_subjects' %}">👥 Teacher-Subject Management</a>
-            <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
-        {% endif %}
-    {% endfor %}
-
-    <!-- EXAM COORDINATOR LINKS -->
-    {% for m in request.user.usermodel_set.all %}
-        {% if m.module.name == 'academic' and m.is_exam_coordinator %}
-            <a href="{% url 'exam_dashboard' %}">📝 Manage Exams</a>
-            <a href="{% url 'admin_results_overview' %}">📊 Results Overview</a>
-        {% endif %}
-    {% endfor %}
-
-    <!-- TEACHER LINKS (For ALL users who are teachers) -->
-    <a href="{% url 'teacher_subjects' %}">📘 My Subjects</a>
-    <a href="{% url 'select_subjects' %}">➕ Request Subjects</a>
-    <a href="{% url 'manage_my_subjects' %}">⚙️ Manage My Subjects</a>
-    <a href="{% url 'class_results_view' %}">📊 Class Results</a>
-
-    <hr>
-
-    <!-- LOGOUT -->
-    <a href="{% url 'logout' %}">🚪 Logout</a>
-
-</div>
-
-<!-- CONTENT -->
-<div class="content">
-
-    <!-- TOPBAR -->
-    <div class="topbar">
+<aside class="academic-sidebar">
+    <button class="btn danger" style="position: absolute; right: 10px; top: 10px; display: none;" id="closeSidebarBtn" onclick="toggleSidebar()">×</button>
+    <div class="sidebar-brand">
+        <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="sidebar-logo">
         <div>
-            👤 {{ request.user.username }}
-        </div>
-
-        <div>
-            🔔 {{ notifications|length }} Notifications
+            <strong>Academic</strong>
+            <span>School System</span>
         </div>
     </div>
 
-    <!-- ALERTS -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
+    <nav class="sidebar-nav">
+        <a href="{% url 'academic_dashboard' %}">Dashboard</a>
+
+        {% if request.user.is_superuser %}
+            <a href="{% url 'exam_dashboard' %}">Manage Exams</a>
+            <a href="{% url 'academic_users' %}">Manage Users</a>
+            <a href="{% url 'approve_subject_requests' %}">
+                Subject Requests
+                {% if pending_requests > 0 %}<span class="nav-badge">{{ pending_requests }}</span>{% endif %}
+            </a>
+            <a href="{% url 'manage_teacher_subjects' %}">Teacher Subjects</a>
+            <a href="{% url 'admin_results_overview' %}">Results Overview</a>
+            <a href="{% url 'transcript_center' %}">Transcripts</a>
+        {% endif %}
+
+        {% for m in academic_modules %}
+            {% if m.is_admin %}
+                <a href="{% url 'exam_dashboard' %}">Manage Exams</a>
+                <a href="{% url 'academic_users' %}">Manage Users</a>
+                <a href="{% url 'approve_subject_requests' %}">
+                    Subject Requests
+                    {% if pending_requests > 0 %}<span class="nav-badge">{{ pending_requests }}</span>{% endif %}
+                </a>
+                <a href="{% url 'manage_teacher_subjects' %}">Teacher Subjects</a>
+                <a href="{% url 'admin_results_overview' %}">Results Overview</a>
+                <a href="{% url 'transcript_center' %}">Transcripts</a>
+            {% elif m.is_exam_coordinator %}
+                <a href="{% url 'exam_dashboard' %}">Manage Exams</a>
+                <a href="{% url 'admin_results_overview' %}">Results Overview</a>
+                <a href="{% url 'transcript_center' %}">Transcripts</a>
+            {% endif %}
         {% endfor %}
+
+        <div class="nav-group-label">Teaching</div>
+        <a href="{% url 'teacher_subjects' %}">My Subjects</a>
+        <a href="{% url 'select_subjects' %}">Request Subjects</a>
+        <a href="{% url 'manage_my_subjects' %}">Manage My Subjects</a>
+        <a href="{% url 'class_results_view' %}">Class Results</a>
+    </nav>
+
+    <a href="{% url 'logout' %}" class="sidebar-logout">Logout</a>
+</aside>
+
+<main class="academic-main">
+    <header class="academic-topbar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="mobile-toggle" onclick="toggleSidebar()">
+                ☰
+            </button>
+            <div>
+                <span class="topbar-label">Signed in as</span>
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+            </div>
+        </div>
+
+        <details class="notification-menu">
+            <summary>
+                Notifications
+                {% if notification_count > 0 %}<span class="topbar-badge">{{ notification_count }}</span>{% endif %}
+            </summary>
+            <div class="notification-panel">
+                {% if notifications %}
+                    <a href="{% url 'mark_notifications_read' %}" class="btn ghost" style="width:100%; margin-bottom:6px;">Mark all read</a>
+                    {% for n in notifications %}
+                        <div class="notification-item">
+                            <p>{{ n.message }}</p>
+                            <span>{{ n.created_at|date:"M d, H:i" }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="notification-empty">No unread notifications.</div>
+                {% endif %}
+            </div>
+        </details>
+    </header>
+
+    {% if messages %}
+        <div class="messages-stack">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
     {% endif %}
 
-    <!-- MAIN CONTENT -->
     {% block content %}{% endblock %}
-
-</div>
-
-<!-- POPUP -->
-<div id="popup" class="popup"></div>
+</main>
 
 <script>
-function showPopup(msg){
-    let p = document.getElementById('popup');
-    p.innerText = msg;
-    p.style.display='block';
-    setTimeout(()=>p.style.display='none',3000);
+function toggleSidebar() {
+    const sidebar = document.querySelector('.academic-sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const closeBtn = document.getElementById('closeSidebarBtn');
+    
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    
+    if (window.innerWidth <= 820) {
+        closeBtn.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
+    }
 }
 </script>
 

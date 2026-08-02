@@ -19,6 +19,7 @@
 body {
     font-family: 'Inter', sans-serif;
     background: var(--bg-light);
+    color: var(--text-dark);
 }
 
 /* 🔷 SIDEBAR */
@@ -31,6 +32,7 @@ body {
     padding: 20px 15px;
     display: flex;
     flex-direction: column;
+    z-index: 1000;
 }
 
 /* LOGO */
@@ -117,8 +119,38 @@ body {
 .content-wrapper {
     background: white;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(31, 58, 95, 0.08);
 }
+
+.btn,
+button.btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #e8eef5;
+    color: var(--text-dark);
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-sm {
+    min-height: 30px;
+    padding: 6px 9px;
+    font-size: 12px;
+}
+
+.btn-primary { background: var(--secondary-color); color: #ffffff; }
+.btn-secondary { background: #64748b; color: #ffffff; }
+.btn-success { background: var(--success-color); color: #ffffff; }
+.btn-warning { background: var(--primary-color); color: #1f2937; }
+.btn-danger { background: var(--danger-color); color: #ffffff; }
 
 /* 🔔 ALERTS */
 .messages-container {
@@ -168,6 +200,11 @@ body {
 
     .topbar {
         flex-direction: row;
+        gap: 10px;
+    }
+
+    .content-wrapper {
+        padding: 14px;
     }
 
     /* TOGGLE BUTTON */

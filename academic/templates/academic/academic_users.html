@@ -1,54 +1,99 @@
 {% extends "academic/base.html" %}
 
 {% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h2>Academic Users</h2>
+        <p>Approve academic users and assign their teaching subjects.</p>
+    </div>
 
-<h2>👥 Academic Users</h2>
+    <form method="get" class="filter-bar panel">
+        <label>
+            Search
+            <input type="search" name="q" value="{{ query }}" placeholder="Name, username, or email">
+        </label>
+        <label>
+            Status
+            <select name="status">
+                <option value="">All Statuses</option>
+                <option value="approved" {% if filter_status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+            </select>
+        </label>
+        <label>
+            Role
+            <select name="role">
+                <option value="">All Roles</option>
+                <option value="admin" {% if filter_role == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="coordinator" {% if filter_role == 'coordinator' %}selected{% endif %}>Coordinator</option>
+                <option value="teacher" {% if filter_role == 'teacher' %}selected{% endif %}>Teacher</option>
+            </select>
+        </label>
+        <button type="submit">Search</button>
+        <a href="{% url 'academic_users' %}" class="btn ghost">Reset</a>
+    </form>
 
-<table border="1" cellpadding="10">
-<tr>
-    <th>Username</th>
-    <th>Status</th>
-    <th>Role</th>
-    <th>Actions</th>
-</tr>
+    <div class="table-panel table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for um in user_modules %}
+                <tr>
+                    <td>
+                        <strong>{{ um.user.get_full_name|default:um.user.username }}</strong><br>
+                        <small>{{ um.user.username }}{% if um.user.email %} · {{ um.user.email }}{% endif %}</small>
+                    </td>
+                    <td>
+                        {% if um.is_approved %}
+                            <span class="badge success">Approved</span>
+                        {% else %}
+                            <span class="badge warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if um.is_admin %}
+                            <span class="badge info">Admin</span>
+                        {% elif um.is_exam_coordinator %}
+                            <span class="badge info">Coordinator</span>
+                        {% else %}
+                            <span class="badge">Teacher</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="actions-row">
+                            {% if not um.is_approved %}
+                                <a href="{% url 'approve_academic_user' um.user.id %}" class="btn success">Approve</a>
+                            {% endif %}
+                            <a href="{% url 'assign_subjects' um.user.id %}" class="btn">Assign</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No academic users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-{% for um in user_modules %}
-<tr>
-    <td>{{ um.user.username }}</td>
-
-    <td>
-        {% if um.is_approved %}
-            ✅ Approved
-        {% else %}
-            ⏳ Pending
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?q={{ query }}&status={{ filter_status }}&role={{ filter_role }}&page={{ page_obj.previous_page_number }}">Previous</a>
         {% endif %}
-    </td>
-
-    <td>
-        {% if um.is_admin %}
-            👑 Admin
-        {% elif um.is_exam_coordinator %}
-            🧠 Coordinator
-        {% else %}
-            👨‍🏫 Teacher
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?q={{ query }}&status={{ filter_status }}&role={{ filter_role }}&page={{ page_obj.next_page_number }}">Next</a>
         {% endif %}
-    </td>
-
-    <td>
-        {% if not um.is_approved %}
-            <a href="{% url 'approve_academic_user' um.user.id %}">
-                ✅ Appro
-            </a>
-        {% endif %}
-
-        |
-        <a href="{% url 'assign_subjects' um.user.id %}">
-            📚 Assign
-        </a>
-    </td>
-</tr>
-{% endfor %}
-
-</table>
-
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

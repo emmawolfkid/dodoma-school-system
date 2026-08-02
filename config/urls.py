@@ -19,14 +19,23 @@ from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import RedirectView
+
+# Custom Admin Branding - Removing "Django" naming for a professional look
+admin.site.site_header = settings.ADMIN_SITE_HEADER
+admin.site.site_title = settings.ADMIN_SITE_TITLE
+admin.site.index_title = settings.ADMIN_INDEX_TITLE
 
 urlpatterns = [
     path('', lambda request: redirect('accounts/login/'), name='root'),
-    path('admin/', admin.site.urls),
+    path('portal-admin-access/', admin.site.urls),  # Obscured admin path
+    path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'images/favicon.png')), # Global Favicon
     path('accounts/', include('accounts.urls')),
-    path('registration/', include('registration.urls')),
+    path('registration/', include('registration.urls')), # This needs to be uncommented or re-added if it was removed
     path('discipline/', include('discipline.urls')),
     path('academic/', include('academic.urls')),
+    path('certificate/', include('certificate.urls')),
+    path('audit/', include('audit.urls')),
 ]
 
 if settings.DEBUG:

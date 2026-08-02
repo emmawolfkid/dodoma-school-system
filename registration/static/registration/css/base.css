@@ -1,9 +1,9 @@
 /* --- Global Layout --- */
 :root {
     --sidebar-width: 260px;
-    --sidebar-bg: #0f172a; /* Deep Dark Blue */
-    --sidebar-hover: #1e293b;
-    --accent-color: #6366f1;
+    --sidebar-bg: #102849;
+    --sidebar-hover: #1a3c6e;
+    --accent-color: #f5a623;
     --text-on-dark: #f8fafc;
     --main-bg: #f1f5f9;
     --transition: all 0.3s ease;
@@ -17,7 +17,9 @@
 
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: var(--main-bg);
+    background:
+        linear-gradient(180deg, rgba(26, 60, 110, 0.08), transparent 300px),
+        var(--main-bg);
     display: flex; /* Creates the Sidebar + Content split */
     min-height: 100vh;
 }
@@ -38,12 +40,25 @@ body {
 
 /* Brand Section */
 .brand-section {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-image {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 14px;
+    padding: 6px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.22);
 }
 
 .brand-logo {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 800;
     display: flex;
     align-items: center;
@@ -91,9 +106,12 @@ body {
 
 .nav-icon {
     margin-right: 12px;
-    font-size: 1.2rem;
-    width: 24px;
+    font-size: 0.72rem;
+    width: 34px;
     text-align: center;
+    padding: 3px 5px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
 }
 
 /* Sidebar Footer (User Info) */

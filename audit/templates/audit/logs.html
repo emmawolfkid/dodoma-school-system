@@ -1,0 +1,349 @@
+{% extends "audit/base.html" %}
+
+{% block content %}
+
+<style>
+    .audit-header {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .audit-header h1 {
+        font-size: 1.75rem;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+    }
+    
+    .audit-header p {
+        color: #64748b;
+        font-size: 0.875rem;
+    }
+    
+    .audit-filters {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .filter-form {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+    
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #4f46e5;
+    }
+    
+    .btn {
+        padding: 0.5rem 1.25rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary {
+        background: #4f46e5;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #4338ca;
+    }
+    
+    .btn-secondary {
+        background: #64748b;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #475569;
+    }
+    
+    .audit-table-container {
+        background: white;
+        border-radius: 12px;
+        overflow-x: auto;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 700px;
+    }
+    
+    .audit-table thead {
+        background: #f8fafc;
+    }
+    
+    .audit-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .audit-table td {
+        padding: 0.875rem 1rem;
+        font-size: 0.875rem;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .audit-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-create {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .badge-update {
+        background: #fed7aa;
+        color: #9a3412;
+    }
+    
+    .badge-delete {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    details summary {
+        cursor: pointer;
+        color: #4f46e5;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    details pre {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #f1f5f9;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-width: 300px;
+    }
+    
+    .audit-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        padding: 1rem;
+    }
+    
+    .audit-pagination a {
+        padding: 0.5rem 1rem;
+        background: white;
+        color: #4f46e5;
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .audit-pagination a:hover {
+        background: #4f46e5;
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .audit-header h1 {
+            font-size: 1.25rem;
+        }
+        .filter-form {
+            flex-direction: column;
+        }
+        .filter-group {
+            width: 100%;
+        }
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        .audit-table th,
+        .audit-table td {
+            padding: 0.5rem;
+            font-size: 0.75rem;
+        }
+        details pre {
+            max-width: 200px;
+        }
+    }
+</style>
+
+<div class="audit-header">
+    <h1>📜 Audit Logs</h1>
+    <p>Complete history of all system activities</p>
+</div>
+
+<!-- Filter Bar -->
+<div class="audit-filters">
+    <form method="get" class="filter-form">
+        <div class="filter-group">
+            <label>🔍 Search</label>
+            <input type="text" name="search" placeholder="User, action, module..." value="{{ search }}">
+        </div>
+        
+        <div class="filter-group">
+            <label>🎯 Action</label>
+            <select name="action">
+                <option value="">All Actions</option>
+                <option value="create" {% if action_filter == "create" %}selected{% endif %}>Create</option>
+                <option value="update" {% if action_filter == "update" %}selected{% endif %}>Update</option>
+                <option value="delete" {% if action_filter == "delete" %}selected{% endif %}>Delete</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>📅 Date Range</label>
+            <select name="date_filter">
+                <option value="">All Time</option>
+                <option value="today" {% if date_filter == "today" %}selected{% endif %}>Today</option>
+                <option value="week" {% if date_filter == "week" %}selected{% endif %}>Last 7 Days</option>
+                <option value="month" {% if date_filter == "month" %}selected{% endif %}>This Month</option>
+                <option value="year" {% if date_filter == "year" %}selected{% endif %}>This Year</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">🔍 Apply Filters</button>
+        </div>
+        
+        <div class="filter-group">
+            <label>&nbsp;</label>
+           <a href="{% url 'audit:export_audit_pdf' %}?date_filter={{ date_filter }}&action={{ action_filter }}&search={{ search }}" class="btn btn-secondary">
+                📄 Export PDF
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Logs Table -->
+<div class="audit-table-container">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Model</th>
+                <th>Module</th>
+                <th>Time</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.user|default:"System" }}</td>
+                <td>
+                    {% if log.action == 'create' %}
+                        <span class="badge badge-create">CREATE</span>
+                    {% elif log.action == 'update' %}
+                        <span class="badge badge-update">UPDATE</span>
+                    {% elif log.action == 'delete' %}
+                        <span class="badge badge-delete">DELETE</span>
+                    {% else %}
+                        <span class="badge">{{ log.action|upper }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ log.model_name|default:"-" }}</td>
+                <td>{{ log.module|default:"-" }}</td>
+                <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                <td>
+                    {% if log.changes %}
+                    <details>
+                        <summary>📄 View</summary>
+                        <pre>{{ log.changes|safe }}</pre>
+                    </details>
+                    {% else %}
+                    <span style="color: #94a3b8;">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">
+                    No audit logs found matching your criteria
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if logs.has_other_pages %}
+<div class="audit-pagination">
+    {% if logs.has_previous %}
+        <a href="?page={{ logs.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date_filter={{ date_filter }}{% endif %}">
+            ⬅ Previous
+        </a>
+    {% endif %}
+    
+    <span style="color: #64748b;">
+        Page {{ logs.number }} of {{ logs.paginator.num_pages }}
+    </span>
+    
+    {% if logs.has_next %}
+        <a href="?page={{ logs.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if date_filter %}&date_filter={{ date_filter }}{% endif %}">
+            Next ➡
+        </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

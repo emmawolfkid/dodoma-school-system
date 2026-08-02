@@ -228,11 +228,13 @@ body {
 .action-cell {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .btn-action {
-    width: 36px;
+    min-width: 36px;
     height: 36px;
+    padding: 0 0.7rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -240,13 +242,49 @@ body {
     text-decoration: none;
     transition: background 0.2s;
     font-size: 1.1rem;
+    border: 0;
+    cursor: pointer;
+    font-weight: 700;
 }
 
 .view-btn { background: #e0e7ff; color: var(--primary-color); }
 .view-btn:hover { background: #c7d2fe; }
 
+.edit-btn { background: #dbeafe; color: #1d4ed8; }
+.edit-btn:hover { background: #bfdbfe; }
+
 .archive-btn { background: #fef3c7; color: var(--warning-color); }
 .archive-btn:hover { background: #fde68a; }
+
+.student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #1a3c6e;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.pagination a,
+.pagination span {
+    padding: 0.55rem 0.8rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 700;
+}
 
 /* --- Photo Cell --- */
 .photo-cell img, .photo-cell div {

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'discipline/css/students_by_class.css' %}">
+<link rel="stylesheet" href="{% static 'discipline/css/student_by_class.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -11,6 +11,11 @@
     <div class="header-left">
         <i class="fas fa-users"></i>
         <h2>Class {{ class_name }} Students</h2>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'discipline:class_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Classes
+        </a>
     </div>
 </div>
 

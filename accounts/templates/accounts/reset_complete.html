@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset Complete - School Management System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}?v=2">
+</head>
+<body>
+<div class="auth-page">
+    <div class="container">
+        <h2>Password Reset Complete</h2>
+        <p>Your password has been changed successfully.</p>
+        <p><a href="{% url 'login' %}">Login with your new password</a></p>
+    </div>
+</div>
+</body>
+</html>

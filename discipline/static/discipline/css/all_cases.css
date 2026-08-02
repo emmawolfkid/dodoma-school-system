@@ -28,7 +28,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    background: white;
+    background: #f8fbff;
+    border: 1px solid #e5edf5;
     padding: 15px;
     border-radius: 10px;
     margin-bottom: 20px;
@@ -41,10 +42,13 @@
 }
 
 .filter-group input,
-.filter-group select {
+.filter-group select,
+.filters input,
+.filters select {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 6px;
+    min-height: 38px;
 }
 
 .filter-actions {
@@ -102,9 +106,11 @@
 
 
 /* 🔷 ACTION BUTTONS */
-.actions-flex {
+.actions-flex,
+.actions {
     display: flex;
-    gap: 5px;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 
@@ -143,6 +149,16 @@
 
     .filters {
         flex-direction: column;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-actions,
+    .header-actions .btn {
+        width: 100%;
     }
 
     .table-cases th,

@@ -22,6 +22,10 @@ from .views import (
     student_report_pdf,
     import_students_excel,
     download_import_template,
+    edit_student,
+    promote_students,
+    promotion_revert_list,
+    undo_promotion_batch,
    
 )
 
@@ -42,6 +46,7 @@ urlpatterns = [
     path('restore/<int:student_id>/', restore_student, name='restore_student'),
     path('download/pdf/', download_students_pdf, name='download_students_pdf'),
     path('register/', register_student, name='register_student'),
+    path('student/<int:student_id>/edit/', edit_student, name='edit_student'),
     path('equipment/', manage_equipment, name='manage_equipment'), 
     path('archived/', archived_students, name='archived_students'), 
     path('equipment/<int:equipment_id>/edit/', edit_equipment, name='edit_equipment'),
@@ -49,5 +54,8 @@ urlpatterns = [
     path('student/<int:student_id>/report/', student_report_pdf, name='student_report_pdf'),
     path('import/', import_students_excel, name='import_students'),
     path('import/template/', download_import_template, name='download_import_template'),
+    path('promote/', promote_students, name='promote_students'),
+    path('promote/revert-list/', promotion_revert_list, name='promotion_revert_list'),
+    path('promote/undo-batch/', undo_promotion_batch, name='undo_promotion_batch'),
     
 ]

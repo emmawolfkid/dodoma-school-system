@@ -1,110 +1,76 @@
 {% extends "academic/base.html" %}
 
 {% block content %}
-
-<div style="max-width: 1000px; margin:auto; padding:20px;">
-
-    <h2 style="margin-bottom:20px;">
-        📝 Select Exam - {{ subject.name }} ({{ student_class }})
-    </h2>
-
-    {% if exams %}
-
-    <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
-        <thead style="background:#f5f5f5;">
-            <tr>
-                <th>Exam</th>
-                <th>Term</th>
-                <th>Year</th>
-                <th>Level</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for exam in exams %}
-            <tr>
-
-                <!-- NAME -->
-                <td>
-                    <strong>{{ exam.name }}</strong><br>
-                    <small style="color:#666;">
-                        {% if exam.student_class == "all" %}
-                            All Classes
-                        {% elif exam.student_class == "all_olevel" %}
-                            All O-Level
-                        {% elif exam.student_class == "all_alevel" %}
-                            All A-Level
-                        {% else %}
-                            {{ exam.student_class }}
-                        {% endif %}
-                    </small>
-                </td>
-
-                <!-- TERM -->
-                <td>{{ exam.get_term_display }}</td>
-
-                <!-- YEAR -->
-                <td>{{ exam.academic_year.year }}</td>
-
-                <!-- LEVEL -->
-                <td>
-                    {% if exam.level == 'O' %}
-                        <span style="color:green;">O-Level</span>
-                    {% else %}
-                        <span style="color:blue;">A-Level</span>
-                    {% endif %}
-                </td>
-
-                <!-- STATUS -->
-                <td>
-                    {% if exam.is_locked %}
-                        🔒 Locked
-                    {% elif exam.is_published %}
-                        📢 Published
-                    {% else %}
-                        🟢 Open
-                    {% endif %}
-                </td>
-
-                <!-- ACTION -->
-                <td>
-                    {% if exam.is_locked or exam.is_published %}
-                        <span style="color: gray;">Not Editable</span>
-                    {% else %}
-                        <a href="{% url 'enter_marks' exam_id=exam.id subject_id=subject.id student_class=student_class %}"
-                           style="padding:6px 10px; background:#4CAF50; color:white; text-decoration:none; border-radius:4px;">
-                            📝 Enter Marks
-                        </a>
-                    {% endif %}
-                </td>
-
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    {% else %}
-
-    <div style="padding:20px; background:#ffeeba; border-radius:6px;">
-        ⚠️ No exams found for <strong>{{ student_class }}</strong>.<br><br>
-        👉 Make sure:
-        <ul>
-            <li>Exam level matches subject</li>
-            <li>Exam class matches (Form / all / level)</li>
-        </ul>
+<div class="page-shell">
+    <div class="page-header">
+        <h2>Select Exam</h2>
+        <p>{{ subject.name }} ({{ subject.code }}) for {{ student_class }}</p>
     </div>
 
+    {% if exams %}
+    <div class="table-panel table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Exam</th>
+                    <th>Term</th>
+                    <th>Year</th>
+                    <th>Level</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in exams %}
+                <tr>
+                    <td>
+                        <strong>{{ exam.name }}</strong><br>
+                        <small>
+                            {% if exam.student_class == "all" %}All Classes
+                            {% elif exam.student_class == "all_olevel" %}All O-Level
+                            {% elif exam.student_class == "all_alevel" %}All A-Level
+                            {% else %}{{ exam.student_class }}{% endif %}
+                        </small>
+                    </td>
+                    <td>{{ exam.get_term_display }}</td>
+                    <td>{{ exam.academic_year.year }}</td>
+                    <td>
+                        {% if exam.level == 'O' %}
+                            <span class="badge success">O-Level</span>
+                        {% else %}
+                            <span class="badge info">A-Level</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if exam.is_locked %}
+                            <span class="badge danger">Locked</span>
+                        {% elif exam.is_published %}
+                            <span class="badge warning">Published</span>
+                        {% else %}
+                            <span class="badge success">Open</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if exam.is_locked or exam.is_published %}
+                            <span class="badge">Not Editable</span>
+                        {% else %}
+                            <div class="actions-row">
+                                <a href="{% url 'enter_marks' exam_id=exam.id subject_id=subject.id student_class=student_class %}" class="btn success">Enter Manually</a>
+                                <a href="{% url 'upload_marks_excel' exam_id=exam.id subject_id=subject.id student_class=student_class %}" class="btn warning">Upload Excel</a>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="notice-box">
+            No exams found for <strong>{{ student_class }}</strong>. Make sure the exam level and class match this subject.
+        </div>
     {% endif %}
 
-    <br>
-
-    <a href="{% url 'teacher_subjects' %}"
-       style="padding:8px 15px; background:#6c757d; color:white; text-decoration:none; border-radius:4px;">
-        ← Back
-    </a>
-
+    <a href="{% url 'teacher_subjects' %}" class="btn secondary">Back</a>
 </div>
-
 {% endblock %}

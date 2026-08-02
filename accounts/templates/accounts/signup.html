@@ -5,36 +5,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - School Management System</title>
-    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}?v=2">
 </head>
 <body>
 
+<div class="auth-page">
     <div class="auth-container">
 
+        <!-- ===================== HEADER ===================== -->
         <div class="auth-header">
+            <div class="auth-logo-wrapper">
+                <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="auth-logo">
+            </div>
+            <p class="auth-school-name">School Management System</p>
             <h1>📝 Create Account</h1>
             <p>Register to access school modules</p>
         </div>
 
+        <!-- ===================== BODY ===================== -->
         <div class="auth-body">
 
-            <!-- 🔔 SYSTEM MESSAGES -->
             {% if messages %}
                 {% for message in messages %}
-                    <div class="help-text" style="color: green;">
+                    <div class="alert alert-success">
                         {{ message }}
                     </div>
                 {% endfor %}
             {% endif %}
 
-            <!-- ⚠️ IMPORTANT NOTICE -->
-            <div class="help-text" style="margin-bottom:15px;">
+            <div class="notice-box notice-warning">
                 ⚠️ Your account will require admin approval before you can login.
             </div>
 
             <form method="post">
                 {% csrf_token %}
-                
+
                 {% for field in form %}
                 <div class="form-group">
 
@@ -44,40 +50,37 @@
                         <div class="checkbox-group">
                             {{ field }}
                         </div>
-                        <div class="help-text">
-                            Select the modules you want access to (e.g Academic, Discipline)
-                        </div>
+                        <p class="help-text">Select the modules you want access to (e.g. Academic, Discipline)</p>
                     {% else %}
                         {{ field }}
                     {% endif %}
 
                     {% if field.help_text %}
-                        <div class="help-text">{{ field.help_text }}</div>
+                        <p class="help-text">{{ field.help_text }}</p>
                     {% endif %}
 
                     {% if field.errors %}
-                        <div class="help-text" style="color: #ef4444;">
-                            {% for error in field.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
+                        <p class="field-error">
+                            {% for error in field.errors %}{{ error }}{% endfor %}
+                        </p>
                     {% endif %}
 
                 </div>
                 {% endfor %}
-                
+
                 <button type="submit" class="btn-submit">✅ Register</button>
             </form>
 
         </div>
 
+        <!-- ===================== FOOTER ===================== -->
+        <hr class="auth-footer-divider">
         <div class="auth-footer">
-            <p>Already have an account? 
-                <a href="{% url 'login' %}">Login here</a>
-            </p>
+            <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
         </div>
 
     </div>
+</div>
 
 </body>
 </html>
