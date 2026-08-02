@@ -4,6 +4,11 @@ from accounts.models import UserModule
 
 
 def has_audit_access(user):
+    # AnonymousUser has no row in the DB — filtering UserModule by it
+    # raises a TypeError, and this runs even on the admin login page.
+    if not user.is_authenticated:
+        return False
+
     return UserModule.objects.filter(
         user=user,
         module__name='audit',
