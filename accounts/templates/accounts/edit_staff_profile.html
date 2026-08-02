@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Staff Profile - {{ staff_user.username }}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/dashboard.css' %}?v=2">
+    <style>
+        .form-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 24px; max-width: 760px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+        .form-group label { display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; color: #334155; }
+        .form-control { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+        .form-actions { margin-top: 20px; display: flex; gap: 10px; }
+        .errorlist { color: #dc2626; font-size: 0.8rem; margin: 2px 0 0; padding: 0; list-style: none; }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="header-brand">
+            <div class="welcome-section">
+                <h1>Edit Staff Profile</h1>
+                <p>{{ staff_user.get_full_name|default:staff_user.username }}</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'staff_profile_detail' staff_user.id %}" class="logout-btn">⬅ Cancel</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="form-card">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-grid">
+                {% for field in form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="logout-btn" style="background: var(--primary);">💾 Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

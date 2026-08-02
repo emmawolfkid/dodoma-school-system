@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from audit.models import AuditLog
-from .models import User, Module, UserModule
+from .models import User, Module, UserModule, StaffProfile
 
 
 class LoginLogoutTests(TestCase):
@@ -103,3 +103,45 @@ class AdminForceResetTests(TestCase):
         self.client.post(reverse('admin_force_reset', args=[self.target.id]))
         self.target.refresh_from_db()
         self.assertFalse(self.target.must_change_password)
+
+
+class StaffDirectoryTests(TestCase):
+    def setUp(self):
+        self.superuser = User.objects.create_superuser(username='root2', password='StrongPass123', email='root2@example.com')
+        self.teacher = User.objects.create_user(
+            username='mrsmith', password='StrongPass123', is_approved=True,
+            first_name='John', last_name='Smith',
+        )
+
+    def test_non_superuser_cannot_view_directory(self):
+        regular = User.objects.create_user(username='regular2', password='StrongPass123', is_approved=True)
+        self.client.force_login(regular)
+        response = self.client.get(reverse('staff_directory'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_superuser_can_view_directory(self):
+        self.client.force_login(self.superuser)
+        response = self.client.get(reverse('staff_directory'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'John')
+
+    def test_creating_staff_profile_via_edit_view(self):
+        self.client.force_login(self.superuser)
+        response = self.client.post(reverse('edit_staff_profile', args=[self.teacher.id]), {
+            'employee_id': 'EMP-001',
+            'job_title': 'Mathematics Teacher',
+            'department': 'academic',
+            'employment_type': 'permanent',
+            'employment_status': 'active',
+            'gender': 'Male',
+            'national_id': '',
+            'phone_number': '0712345678',
+            'qualification': 'BSc Mathematics',
+            'region': '', 'district': '', 'address': '',
+            'emergency_contact_name': '', 'emergency_contact_phone': '',
+            'notes': '',
+        })
+        self.assertEqual(response.status_code, 302)
+        profile = StaffProfile.objects.get(user=self.teacher)
+        self.assertEqual(profile.job_title, 'Mathematics Teacher')
+        self.assertEqual(profile.employee_id, 'EMP-001')

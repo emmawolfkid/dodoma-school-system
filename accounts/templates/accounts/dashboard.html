@@ -29,9 +29,12 @@
                 </span>
 
                 {% if request.user.is_superuser %}
-                <div style="margin-top: 15px;">
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                     <a href="{% url 'admin:index' %}" class="logout-btn" style="background: var(--accent); color: var(--primary-dark); font-weight: 700; text-decoration: none; border: none; display: inline-block;">
                         ⚙️ School System Admin
+                    </a>
+                    <a href="{% url 'staff_directory' %}" class="logout-btn" style="background: var(--accent); color: var(--primary-dark); font-weight: 700; text-decoration: none; border: none; display: inline-block;">
+                        👥 Staff Directory
                     </a>
                 </div>
                 {% endif %}

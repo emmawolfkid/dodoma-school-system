@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ staff_user.get_full_name|default:staff_user.username }} - Staff Profile</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/dashboard.css' %}?v=2">
+    <style>
+        .profile-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 24px; max-width: 720px; }
+        .profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+        .profile-field label { display: block; font-size: 0.76rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+        .profile-field span { font-size: 0.95rem; color: #1e293b; }
+        .profile-photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border); }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="header-brand">
+            <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="header-logo">
+            <div class="welcome-section">
+                <h1>{{ staff_user.get_full_name|default:staff_user.username }}</h1>
+                <p>{% if profile %}{{ profile.job_title|default:"Staff member" }}{% else %}No HR profile yet{% endif %}</p>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <a href="{% url 'edit_staff_profile' staff_user.id %}" class="logout-btn" style="background: var(--accent); color: var(--primary-dark);">✏️ Edit Profile</a>
+            <a href="{% url 'staff_directory' %}" class="logout-btn">⬅ Back to Directory</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="profile-card">
+        {% if profile and profile.profile_photo %}
+            <img src="{{ profile.profile_photo.url }}" alt="Photo" class="profile-photo">
+        {% endif %}
+
+        {% if profile %}
+        <div class="profile-grid">
+            <div class="profile-field"><label>Employee ID</label><span>{{ profile.employee_id|default:"—" }}</span></div>
+            <div class="profile-field"><label>National ID</label><span>{{ profile.national_id|default:"—" }}</span></div>
+            <div class="profile-field"><label>Gender</label><span>{{ profile.get_gender_display|default:"—" }}</span></div>
+            <div class="profile-field"><label>Date of Birth</label><span>{{ profile.date_of_birth|default:"—" }}</span></div>
+            <div class="profile-field"><label>Phone</label><span>{{ profile.phone_number|default:"—" }}</span></div>
+            <div class="profile-field"><label>Email</label><span>{{ staff_user.email|default:"—" }}</span></div>
+            <div class="profile-field"><label>Job Title</label><span>{{ profile.job_title|default:"—" }}</span></div>
+            <div class="profile-field"><label>Department</label><span>{{ profile.get_department_display|default:"—" }}</span></div>
+            <div class="profile-field"><label>Qualification</label><span>{{ profile.qualification|default:"—" }}</span></div>
+            <div class="profile-field"><label>Date Employed</label><span>{{ profile.date_employed|default:"—" }}</span></div>
+            <div class="profile-field"><label>Employment Type</label><span>{{ profile.get_employment_type_display }}</span></div>
+            <div class="profile-field"><label>Employment Status</label><span>{{ profile.get_employment_status_display }}</span></div>
+            <div class="profile-field"><label>Region / District</label><span>{{ profile.region|default:"—" }} / {{ profile.district|default:"—" }}</span></div>
+            <div class="profile-field"><label>Address</label><span>{{ profile.address|default:"—" }}</span></div>
+            <div class="profile-field"><label>Emergency Contact</label><span>{{ profile.emergency_contact_name|default:"—" }} ({{ profile.emergency_contact_phone|default:"—" }})</span></div>
+        </div>
+        {% if profile.notes %}
+            <div class="profile-field" style="margin-top:16px;"><label>Notes</label><span>{{ profile.notes }}</span></div>
+        {% endif %}
+        {% else %}
+            <p>This staff member doesn't have an HR profile yet. Click "Edit Profile" to create one.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

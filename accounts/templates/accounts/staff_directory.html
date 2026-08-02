@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Directory - School Management System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/dashboard.css' %}?v=2">
+    <style>
+        .staff-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .staff-table th, .staff-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 0.9rem; }
+        .staff-table th { background: var(--primary); color: #fff; font-weight: 600; }
+        .staff-table tr:hover { background: #f8fafc; }
+        .filters-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .filters-bar input, .filters-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; }
+        .status-pill { padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-on_leave { background: #fef9c3; color: #854d0e; }
+        .status-suspended { background: #fee2e2; color: #991b1b; }
+        .status-resigned, .status-terminated { background: #e2e8f0; color: #475569; }
+        .no-profile { color: var(--muted, #94a3b8); font-style: italic; }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="header-brand">
+            <img src="{% static 'images/school_logo.png' %}?v=2" alt="School Logo" class="header-logo">
+            <div class="welcome-section">
+                <h1>👥 Staff Directory</h1>
+                <p>HR records for all staff members</p>
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'dashboard' %}" class="logout-btn">⬅ Back to Dashboard</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="get" class="filters-bar">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search name, employee ID, job title...">
+        <select name="department">
+            <option value="">All Departments</option>
+            {% for value, label in department_choices %}
+                <option value="{{ value }}" {% if department == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="status">
+            <option value="">All Statuses</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="logout-btn" style="background: var(--primary);">Filter</button>
+    </form>
+
+    <table class="staff-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Job Title</th>
+                <th>Department</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.get_full_name|default:u.username }}</td>
+                {% with profile=u.staff_profile %}
+                {% if profile %}
+                    <td>{{ profile.job_title|default:"—" }}</td>
+                    <td>{{ profile.get_department_display|default:"—" }}</td>
+                    <td>{{ profile.phone_number|default:"—" }}</td>
+                    <td><span class="status-pill status-{{ profile.employment_status }}">{{ profile.get_employment_status_display }}</span></td>
+                {% else %}
+                    <td colspan="4" class="no-profile">No HR profile yet</td>
+                {% endif %}
+                {% endwith %}
+                <td><a href="{% url 'staff_profile_detail' u.id %}" class="logout-btn" style="padding:6px 12px; font-size:0.8rem;">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align:center; padding:30px;">No staff found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

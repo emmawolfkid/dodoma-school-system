@@ -1,12 +1,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import SignupForm
-from .models import UserModule, Module, User
+from django.db.models import Q
+from .forms import SignupForm, StaffProfileForm
+from .models import UserModule, Module, User, StaffProfile
 from audit.models import AuditLog
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
 from academic.utils_notifications import notify_module_admins
+from audit.services import log_action
 
 
 # 🔹 HELPER
@@ -225,3 +227,87 @@ def force_password_change_view(request):
         form = SetPasswordForm(request.user)
 
     return render(request, 'accounts/force_change_password.html', {'form': form})
+
+
+# 🔹 STAFF / HR DIRECTORY
+@login_required
+def staff_directory(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Staff records are for admins only.")
+        return redirect('dashboard')
+
+    query = request.GET.get('q', '').strip()
+    department = request.GET.get('department', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    users = User.objects.select_related('staff_profile').order_by('first_name', 'username')
+
+    if query:
+        users = users.filter(
+            Q(username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(staff_profile__employee_id__icontains=query) |
+            Q(staff_profile__job_title__icontains=query)
+        )
+    if department:
+        users = users.filter(staff_profile__department=department)
+    if status:
+        users = users.filter(staff_profile__employment_status=status)
+
+    return render(request, 'accounts/staff_directory.html', {
+        'users': users,
+        'query': query,
+        'department': department,
+        'status': status,
+        'department_choices': StaffProfile.DEPARTMENT_CHOICES,
+        'status_choices': StaffProfile.EMPLOYMENT_STATUS_CHOICES,
+    })
+
+
+@login_required
+def staff_profile_detail(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    staff_user = get_object_or_404(User, id=user_id)
+    profile = getattr(staff_user, 'staff_profile', None)
+
+    return render(request, 'accounts/staff_profile_detail.html', {
+        'staff_user': staff_user,
+        'profile': profile,
+    })
+
+
+@login_required
+def edit_staff_profile(request, user_id):
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    staff_user = get_object_or_404(User, id=user_id)
+    profile, _ = StaffProfile.objects.get_or_create(user=staff_user)
+
+    if request.method == 'POST':
+        form = StaffProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+
+            log_action(
+                user=request.user,
+                action='update',
+                instance=profile,
+                module='accounts',
+                changes={'event': 'staff_profile_updated', 'target_user': staff_user.username}
+            )
+
+            messages.success(request, f"Staff profile updated for {staff_user.username}.")
+            return redirect('staff_profile_detail', user_id=staff_user.id)
+    else:
+        form = StaffProfileForm(instance=profile)
+
+    return render(request, 'accounts/edit_staff_profile.html', {
+        'form': form,
+        'staff_user': staff_user,
+    })
