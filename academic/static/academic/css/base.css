@@ -511,3 +511,138 @@ pre {
     border-right: none;
   }
 }
+
+/* ===============================
+   NECTA-STYLE RESULT SHEETS
+   =============================== */
+
+.result-letterhead {
+  text-align: center;
+  padding: 24px 22px 20px;
+  margin-bottom: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  border-top: 5px solid var(--primary);
+  box-shadow: var(--shadow);
+}
+
+.result-letterhead img {
+  height: 64px;
+  margin-bottom: 8px;
+}
+
+.result-letterhead h1 {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
+  color: #102849;
+}
+
+.result-letterhead h2 {
+  margin: 6px 0 0;
+  font-size: 1.05rem;
+  color: var(--primary-light);
+  font-weight: 700;
+}
+
+.result-letterhead p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.result-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 20px;
+  margin-bottom: 18px;
+}
+
+.result-meta-grid .meta-item label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.result-meta-grid .meta-item span {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #102849;
+}
+
+/* Grade pills -- consistent coloring wherever a grade appears */
+.grade-pill {
+  display: inline-flex;
+  min-width: 30px;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.grade-a { background: #dcfce7; color: #166534; }
+.grade-b { background: #dbeafe; color: #1e40af; }
+.grade-c { background: #e0f2fe; color: #0369a1; }
+.grade-d { background: #fef3c7; color: #92400e; }
+.grade-e, .grade-s { background: #ffedd5; color: #9a3412; }
+.grade-f, .grade-abs { background: #fee2e2; color: #991b1b; }
+
+/* Division pills -- NECTA Division I (best) through 0 (fail) */
+.division-pill {
+  display: inline-flex;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+.division-i { background: #dcfce7; color: #166534; }
+.division-ii { background: #dbeafe; color: #1e40af; }
+.division-iii { background: #fef3c7; color: #92400e; }
+.division-iv { background: #ffedd5; color: #9a3412; }
+.division-0, .division-incomplete { background: #fee2e2; color: #991b1b; }
+
+.result-table th { white-space: nowrap; }
+.result-table td { text-align: center; }
+.result-table td:nth-child(2) { text-align: left; }
+
+.result-table tr.rank-1 td { background: #fffbeb; }
+
+.result-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.result-summary-bar .summary-item { text-align: center; }
+.result-summary-bar .summary-item label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.result-summary-bar .summary-item strong { font-size: 1.4rem; color: #102849; }
+
+@media print {
+  .academic-sidebar, .academic-topbar, .actions-row, .filter-bar, .btn, button { display: none !important; }
+  .academic-main { margin-left: 0 !important; }
+  body { background: #fff !important; }
+}

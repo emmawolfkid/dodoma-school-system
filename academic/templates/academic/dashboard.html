@@ -2,340 +2,110 @@
 {% load static %}
 
 {% block content %}
+<div class="page-shell">
 
-<div class="dashboard-container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-
-    <!-- Page Header -->
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                color: white; 
-                padding: 25px; 
-                border-radius: 10px; 
-                margin-bottom: 25px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h2 style="margin: 0 0 10px 0;">📊 Academic Dashboard</h2>
-        <p style="margin: 0; opacity: 0.9;">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
+    <div class="page-header">
+        <h1>📊 Academic Dashboard</h1>
+        <p>Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
     </div>
 
-    <!-- 🔔 NOTIFICATIONS SECTION -->
     {% if notifications %}
-    <div style="background: #fff3cd; 
-                border-left: 4px solid #ffc107; 
-                padding: 15px; 
-                margin-bottom: 25px; 
-                border-radius: 5px;">
-        <h4 style="margin: 0 0 10px 0; color: #856404;">🔔 Notifications</h4>
+    <div class="panel" style="border-left: 4px solid var(--warning);">
+        <h4 style="margin: 0 0 10px 0; color: var(--warning);">🔔 Notifications</h4>
         <ul style="margin: 0; padding-left: 20px;">
             {% for n in notifications %}
-                <li style="margin-bottom: 5px; color: #856404;">{{ n.message }}</li>
+                <li style="margin-bottom: 5px;">{{ n.message }}</li>
             {% endfor %}
         </ul>
     </div>
     {% endif %}
 
-    <!-- ================= SUPER ADMIN / SYSTEM ADMIN ================= -->
     {% if role == 'admin' %}
-    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
-                padding: 20px; 
-                border-radius: 10px; 
-                margin-bottom: 25px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3 style="color: white; margin: 0 0 15px 0;">🖥️ System Admin Panel</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+    <div class="panel">
+        <h3 style="margin: 0 0 15px 0; color: #102849;">🖥️ System Admin Panel</h3>
+        <div class="cards-grid">
             {% if request.user.is_superuser %}
-            <a href="{% url 'admin:index' %}" 
-               style="background: #1a3c6e; 
-                      color: white; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                ⚙️ School System Admin Page
-            </a>
+                <a href="{% url 'admin:index' %}" class="btn">⚙️ School System Admin Page</a>
             {% endif %}
-            <a href="{% url 'exam_dashboard' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;
-                      transition: transform 0.2s;">
-                📝 Manage Exams
-            </a>
-            <a href="{% url 'academic_users' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                👥 Manage Academic Users
-            </a>
-            <a href="{% url 'admin_results_overview' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📊 Results Overview
-            </a>
-            <a href="{% url 'approve_subject_requests' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;
-                      position: relative;">
+            <a href="{% url 'exam_dashboard' %}" class="btn ghost">📝 Manage Exams</a>
+            <a href="{% url 'academic_users' %}" class="btn ghost">👥 Manage Academic Users</a>
+            <a href="{% url 'admin_results_overview' %}" class="btn ghost">📊 Results Overview</a>
+            <a href="{% url 'approve_subject_requests' %}" class="btn ghost" style="position: relative;">
                 📩 Subject Requests
-                {% if pending_requests > 0 %}
-                <span style="background: red; 
-                             color: white; 
-                             border-radius: 50%; 
-                             padding: 2px 8px; 
-                             font-size: 12px; 
-                             position: absolute; 
-                             top: -8px; 
-                             right: -8px;">
-                    {{ pending_requests }}
-                </span>
-                {% endif %}
+                {% if pending_requests > 0 %}<span class="topbar-badge" style="position:absolute; top:-8px; right:-8px;">{{ pending_requests }}</span>{% endif %}
             </a>
         </div>
     </div>
     {% endif %}
 
-    <!-- ================= ACADEMIC ADMIN ================= -->
     {% if role == 'academic_admin' %}
-    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                padding: 20px; 
-                border-radius: 10px; 
-                margin-bottom: 25px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3 style="color: white; margin: 0 0 15px 0;">🎓 Academic Admin Panel</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-            <a href="{% url 'exam_dashboard' %}" 
-               style="background: white; 
-                      color: #0099cc; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📝 Manage Exams
-            </a>
-            <a href="{% url 'academic_users' %}" 
-               style="background: white; 
-                      color: #0099cc; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                👥 Manage Academic Users
-            </a>
-           
-            <a href="{% url 'manage_teacher_subjects' %}"
-                 style="background: white; 
-                      color: #0099cc; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">👥 Teacher-Subject Management</a>
-            <a href="{% url 'admin_results_overview' %}" 
-               style="background: white; 
-                      color: #0099cc; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📊 Results Overview
-            </a>
-            <a href="{% url 'approve_subject_requests' %}" 
-               style="background: white; 
-                      color: #0099cc; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;
-                      position: relative;">
+    <div class="panel">
+        <h3 style="margin: 0 0 15px 0; color: #102849;">🎓 Academic Admin Panel</h3>
+        <div class="cards-grid">
+            <a href="{% url 'exam_dashboard' %}" class="btn">📝 Manage Exams</a>
+            <a href="{% url 'academic_users' %}" class="btn ghost">👥 Manage Academic Users</a>
+            <a href="{% url 'manage_teacher_subjects' %}" class="btn ghost">👥 Teacher-Subject Management</a>
+            <a href="{% url 'admin_results_overview' %}" class="btn ghost">📊 Results Overview</a>
+            <a href="{% url 'approve_subject_requests' %}" class="btn ghost" style="position: relative;">
                 📩 Subject Requests
-                {% if pending_requests > 0 %}
-                <span style="background: red; 
-                             color: white; 
-                             border-radius: 50%; 
-                             padding: 2px 8px; 
-                             font-size: 12px; 
-                             position: absolute; 
-                             top: -8px; 
-                             right: -8px;">
-                    {{ pending_requests }}
-                </span>
-                {% endif %}
+                {% if pending_requests > 0 %}<span class="topbar-badge" style="position:absolute; top:-8px; right:-8px;">{{ pending_requests }}</span>{% endif %}
             </a>
         </div>
     </div>
     {% endif %}
 
-    <!-- ================= EXAM COORDINATOR ================= -->
     {% if role == 'exam_coordinator' %}
-    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); 
-                padding: 20px; 
-                border-radius: 10px; 
-                margin-bottom: 25px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3 style="color: white; margin: 0 0 15px 0;">📑 Exam Coordinator Panel</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-            <a href="{% url 'exam_dashboard' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📝 Manage Exams
-            </a>
-            <a href="{% url 'admin_results_overview' %}" 
-               style="background: white; 
-                      color: #f5576c; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📊 View Results
-            </a>
+    <div class="panel">
+        <h3 style="margin: 0 0 15px 0; color: #102849;">📑 Exam Coordinator Panel</h3>
+        <div class="cards-grid">
+            <a href="{% url 'exam_dashboard' %}" class="btn">📝 Manage Exams</a>
+            <a href="{% url 'admin_results_overview' %}" class="btn ghost">📊 View Results</a>
         </div>
     </div>
     {% endif %}
 
-    <!-- ================= TEACHER ================= -->
     {% if role == 'teacher' %}
-    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); 
-                padding: 20px; 
-                border-radius: 10px; 
-                margin-bottom: 25px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h3 style="color: white; margin: 0 0 15px 0;">👨‍🏫 Teacher Panel</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-            <a href="{% url 'teacher_subjects' %}" 
-               style="background: white; 
-                      color: #2d8659; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                📘 My Subjects
-            </a>
-            <a href="{% url 'select_subjects' %}" 
-               style="background: white; 
-                      color: #2d8659; 
-                      padding: 12px; 
-                      text-decoration: none; 
-                      border-radius: 5px; 
-                      text-align: center;
-                      font-weight: bold;">
-                ➕ Request Subjects
-            </a>
-            <a href="{% url 'admin_results_overview' %}" 
-              style="background: white; color: #f5576c; padding: 12px; text-decoration: none; border-radius: 5px; text-align: center; font-weight: bold;">
-              📊 View Results
-            </a>
+    <div class="panel">
+        <h3 style="margin: 0 0 15px 0; color: #102849;">👨‍🏫 Teacher Panel</h3>
+        <div class="cards-grid">
+            <a href="{% url 'teacher_subjects' %}" class="btn">📘 My Subjects</a>
+            <a href="{% url 'select_subjects' %}" class="btn ghost">➕ Request Subjects</a>
+            <a href="{% url 'admin_results_overview' %}" class="btn ghost">📊 View Results</a>
         </div>
     </div>
     {% endif %}
 
-    <!-- Quick Stats Section (Optional - shows current status) -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 25px;">
-        
+    <div class="section-title">Quick Stats</div>
+    <div class="stats-grid">
         {% if role == 'teacher' %}
-        <div style="background: #f8f9fa; 
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    text-align: center;
-                    border: 1px solid #dee2e6;">
-            <div style="font-size: 24px; margin-bottom: 5px;">📚</div>
-            <div style="font-size: 20px; font-weight: bold;">{{ assigned_subjects_count|default:"0" }}</div>
-            <div style="color: #6c757d;">My Subjects</div>
+        <div class="stat-card">
+            <strong>{{ assigned_subjects_count|default:"0" }}</strong>
+            <span>📚 My Subjects</span>
         </div>
         {% endif %}
-        
+
         {% if role == 'academic_admin' or role == 'admin' %}
-        <div style="background: #f8f9fa; 
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    text-align: center;
-                    border: 1px solid #dee2e6;">
-            <div style="font-size: 24px; margin-bottom: 5px;">📝</div>
-            <div style="font-size: 20px; font-weight: bold;">{{ total_exams|default:"0" }}</div>
-            <div style="color: #6c757d;">Total Exams</div>
+        <div class="stat-card">
+            <strong>{{ total_exams|default:"0" }}</strong>
+            <span>📝 Total Exams</span>
         </div>
-        
-        <div style="background: #f8f9fa; 
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    text-align: center;
-                    border: 1px solid #dee2e6;">
-            <div style="font-size: 24px; margin-bottom: 5px;">👥</div>
-            <div style="font-size: 20px; font-weight: bold;">{{ total_teachers|default:"0" }}</div>
-            <div style="color: #6c757d;">Teachers</div>
+        <div class="stat-card">
+            <strong>{{ total_teachers|default:"0" }}</strong>
+            <span>👥 Teachers</span>
         </div>
-        
-        <div style="background: #f8f9fa; 
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    text-align: center;
-                    border: 1px solid #dee2e6;">
-            <div style="font-size: 24px; margin-bottom: 5px;">✅</div>
-            <div style="font-size: 20px; font-weight: bold;">{{ published_exams|default:"0" }}</div>
-            <div style="color: #6c757d;">Published Results</div>
+        <div class="stat-card">
+            <strong>{{ published_exams|default:"0" }}</strong>
+            <span>✅ Published Results</span>
         </div>
         {% endif %}
-        
+
         {% if notifications %}
-        <div style="background: #fff3cd; 
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    text-align: center;
-                    border: 1px solid #ffeeba;">
-            <div style="font-size: 24px; margin-bottom: 5px;">🔔</div>
-            <div style="font-size: 20px; font-weight: bold; color: #856404;">{{ notifications|length }}</div>
-            <div style="color: #856404;">Unread Notifications</div>
+        <div class="stat-card" style="border-left: 4px solid var(--warning);">
+            <strong style="color: var(--warning);">{{ notifications|length }}</strong>
+            <span>🔔 Unread Notifications</span>
         </div>
         {% endif %}
     </div>
 
 </div>
-
-<style>
-    /* Hover effects for buttons */
-    .dashboard-container a:hover {
-        transform: translateY(-2px);
-        transition: transform 0.2s ease;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .dashboard-container {
-            padding: 10px;
-        }
-        
-        .dashboard-container a {
-            font-size: 14px;
-        }
-    }
-</style>
-
 {% endblock %}

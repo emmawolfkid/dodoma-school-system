@@ -1,91 +1,75 @@
 {% extends "academic/base.html" %}
 {% load static %}
+{% load custom_tags %}
 
 {% block content %}
-<div style="max-width: 1000px; margin: auto; padding: 20px;">
+<div class="page-shell" style="max-width: 800px;">
 
-    <!-- HEADER -->
-    <div style="text-align:center; margin-bottom:20px;">
-        <img src="{% static 'images/school_logo.png' %}" style="height:80px;">
-        <h2>DODOMA SECONDARY SCHOOL</h2>
-        <h3>STUDENT RESULT SLIP</h3>
-        <p>{{ exam.name }} - {{ exam.academic_year.year }}</p>
+    <div class="result-letterhead">
+        <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+        <h1>DODOMA SECONDARY SCHOOL</h1>
+        <h2>Student Result Slip</h2>
+        <p>{{ exam.name }} &bull; {{ exam.academic_year.year }}</p>
     </div>
 
-    <!-- STUDENT INFO -->
-    <div style="margin-bottom:20px;">
-        <p><strong>Name:</strong> {{ student.first_name }} {{ student.last_name }}</p>
-        <p><strong>Reg No:</strong> {{ student.registration_number }}</p>
-        <p><strong>Class:</strong> {{ student.student_class }}</p>
-        <p><strong>Position:</strong> {{ result.position|default:"-" }}</p>
+    <div class="panel">
+        <div class="result-meta-grid">
+            <div class="meta-item"><label>Name</label><span>{{ student.first_name }} {{ student.last_name }}</span></div>
+            <div class="meta-item"><label>Registration No.</label><span>{{ student.registration_number }}</span></div>
+            <div class="meta-item"><label>Class</label><span>{{ student.student_class }}</span></div>
+            <div class="meta-item"><label>Position</label><span>{{ result.position|default:"—" }}</span></div>
+        </div>
     </div>
 
-    <!-- RESULTS TABLE -->
-    <table border="1" style="width:100%; border-collapse:collapse; text-align:center;">
-        <thead style="background:#2c3e50; color:white;">
-            <tr>
-                <th>Subject</th>
-
-                {% if show_marks %}
-                <th>Marks</th>
-                {% endif %}
-
-                <th>Grade</th>
-                <th>Remarks</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for sub in result.subjects %}
-            <tr>
-                <td>{{ sub.subject.name }}</td>
-
-                {% if show_marks %}
-                <td>
-                    {% if sub.is_absent %}
-                        ABS
-                    {% else %}
-                        {{ sub.total_marks|default:"-" }}
-                    {% endif %}
-                </td>
-                {% endif %}
-
-                <td><strong>{{ sub.grade }}</strong></td>
-
-                <td>
-                    {% if sub.grade == 'A' %}Excellent
-                    {% elif sub.grade == 'B' %}Very Good
-                    {% elif sub.grade == 'C' %}Good
-                    {% elif sub.grade == 'D' %}Satisfactory
-                    {% elif sub.grade == 'E' %}Pass
-                    {% elif sub.grade == 'F' %}Fail
-                    {% else %}-
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- SUMMARY -->
-    <div style="margin-top:20px;">
-        <p><strong>Total Points:</strong> {{ result.total_points }}</p>
-        <p><strong>Division:</strong> {{ result.division }}</p>
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table result-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        {% if show_marks %}<th>Marks</th>{% endif %}
+                        <th>Grade</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in result.subjects %}
+                    <tr>
+                        <td style="text-align:left;">{{ sub.subject.name }}</td>
+                        {% if show_marks %}
+                        <td>{% if sub.is_absent %}ABS{% else %}{{ sub.total_marks|default:"-" }}{% endif %}</td>
+                        {% endif %}
+                        <td><span class="grade-pill {{ sub.grade|grade_css }}">{{ sub.grade }}</span></td>
+                        <td>
+                            {% if sub.grade == 'A' %}Excellent
+                            {% elif sub.grade == 'B' %}Very Good
+                            {% elif sub.grade == 'C' %}Good
+                            {% elif sub.grade == 'D' %}Satisfactory
+                            {% elif sub.grade == 'E' %}Pass
+                            {% elif sub.grade == 'S' %}Subsidiary Pass
+                            {% elif sub.grade == 'F' %}Fail
+                            {% elif sub.grade == 'ABS' %}Absent
+                            {% else %}—
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- BUTTONS -->
-    <div style="margin-top:25px; text-align:center;">
+    <div class="result-summary-bar">
+        <div class="summary-item"><label>Total Points</label><strong>{{ result.total_points }}</strong></div>
+        <div class="summary-item">
+            <label>Division</label>
+            <span class="division-pill {{ result.division|division_css }}" style="font-size:1rem;">{{ result.division }}</span>
+        </div>
+    </div>
 
-        <a href="{% url 'download_student_pdf' exam.id student.id %}"
-           style="background:#dc3545; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
-            📄 Download Slip
-        </a>
-
-        <a href="{% url 'class_results' exam.id student.student_class %}"
-           style="background:#6c757d; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
-            ← Back to Class
-        </a>
-
+    <div class="actions-row" style="justify-content:center; margin-top:22px;">
+        <a href="{% url 'download_student_pdf' exam.id student.id %}" class="btn danger">📄 Download Slip</a>
+        <a href="{% url 'class_results' exam.id student.student_class %}" class="btn ghost">← Back to Class</a>
     </div>
 
 </div>

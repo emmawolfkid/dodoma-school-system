@@ -2,102 +2,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
     <style>
-        body { font-family: Arial, sans-serif; font-size: 10px; }
+        @page { size: A4 landscape; margin: 1.5cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 9px; color: #1a1a1a; }
 
-        h2, h3, p {
-            text-align: center;
-            margin: 3px;
-        }
+        .letterhead { text-align: center; border-bottom: 2px solid #1a3c6e; padding-bottom: 8px; margin-bottom: 10px; }
+        .letterhead img { width: 55px; height: 55px; }
+        .letterhead h1 { margin: 4px 0 0; font-size: 15px; color: #102849; letter-spacing: 0.5px; }
+        .letterhead h2 { margin: 3px 0 0; font-size: 12px; color: #1a3c6e; font-weight: normal; }
+        .letterhead p { margin: 3px 0 0; font-size: 9px; color: #555; }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 4px;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        th, td { border: 1px solid #999; padding: 4px 3px; text-align: center; }
+        th { background: #1a3c6e; color: #ffffff; font-size: 8px; text-transform: uppercase; }
+        .name { text-align: left; font-weight: bold; }
+        tr:nth-child(even) td { background: #f5f8fc; }
 
-        .logo img {
-            width: 62px;
-            height: 62px;
-        }
+        /* Grade colors -- matched to the on-screen result-sheet palette */
+        .A { background: #dcfce7; color: #166534; font-weight: bold; }
+        .B { background: #dbeafe; color: #1e40af; font-weight: bold; }
+        .C { background: #e0f2fe; color: #0369a1; }
+        .D { background: #fef3c7; color: #92400e; }
+        .E, .S { background: #ffedd5; color: #9a3412; }
+        .F, .ABS { background: #fee2e2; color: #991b1b; font-weight: bold; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
+        .division-cell { font-weight: bold; }
 
-        th, td {
-            border: 1px solid #000;
-            padding: 4px;
-            text-align: center;
-        }
-
-        th { background: #eee; }
-
-        .name { text-align: left; }
-
-        /* Grade colors */
-        .A { color: green; font-weight: bold; }
-        .B { color: black; }
-        .C { color: gray; }
-        .D { color: orange; }
-        .F { color: red; font-weight: bold; }
-        .ABS { color: gray; }
-
+        .footer { margin-top: 26px; font-size: 8px; color: #555; }
+        .signature-row { margin-top: 34px; display: table; width: 100%; }
+        .signature-block { display: table-cell; width: 33%; text-align: center; }
+        .signature-line { border-top: 1px solid #333; width: 70%; margin: 0 auto 4px; padding-top: 3px; }
     </style>
 </head>
 <body>
 
-{% if logo_path %}
-<div class="logo">
-    <img src="{{ logo_path }}" alt="School Logo">
+<div class="letterhead">
+    {% if logo_path %}<img src="{{ logo_path }}" alt="School Logo">{% endif %}
+    <h1>DODOMA SECONDARY SCHOOL</h1>
+    <h2>{{ exam.name }} — Official Class Results</h2>
+    <p>{{ exam.student_class }} &bull; {{ exam.academic_year.year }} &bull; {{ exam.level }}-Level &bull; Generated {% now "d M Y, H:i" %}</p>
 </div>
-{% endif %}
-
-<h2>DODOMA SECONDARY SCHOOL</h2>
-<h3>{{ exam.name }} RESULTS</h3>
-<p>{{ exam.student_class }} | {{ exam.academic_year.year }}</p>
 
 <table>
     <thead>
         <tr>
-            <th>POS</th>
-            <th>NAME</th>
-            <th>REG</th>
-
+            <th>Pos</th>
+            <th>Name</th>
+            <th>Reg No.</th>
             {% for subject in subjects %}
                 <th>{{ subject.code }}</th>
             {% endfor %}
-
-            <th>PTS</th>
-            <th>DIV</th>
+            <th>Points</th>
+            <th>Division</th>
         </tr>
     </thead>
-
     <tbody>
         {% for d in students_data %}
         <tr>
             <td>{{ d.position }}</td>
-
-            <td class="name">
-                {{ d.student.first_name }} {{ d.student.last_name }}
-            </td>
-
+            <td class="name">{{ d.student.first_name }} {{ d.student.last_name }}</td>
             <td>{{ d.student.registration_number }}</td>
-
             {% for sub in d.subjects_data %}
-                <td class="{{ sub.grade }}">
-                    {{ sub.grade }}
-                </td>
+                <td class="{{ sub.grade }}">{{ sub.grade }}</td>
             {% endfor %}
-
-            <td>{{ d.points }}</td>
-            <td>{{ d.division }}</td>
+            <td><strong>{{ d.points }}</strong></td>
+            <td class="division-cell">{{ d.division }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+
+<div class="footer">
+    <p>This is an official computer-generated result sheet. Grades: A/B = Distinction &bull; C/D = Credit &bull; E/S = Pass &bull; F/ABS = Fail/Absent.</p>
+    <div class="signature-row">
+        <div class="signature-block"><div class="signature-line">Class Teacher</div></div>
+        <div class="signature-block"><div class="signature-line">Academic Coordinator</div></div>
+        <div class="signature-block"><div class="signature-line">Head of School</div></div>
+    </div>
+</div>
 
 </body>
 </html>

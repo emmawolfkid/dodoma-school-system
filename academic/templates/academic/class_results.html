@@ -3,161 +3,102 @@
 {% load custom_tags %}
 
 {% block content %}
+<div class="page-shell">
 
-<div style="padding:25px;">
-
-    <!-- ================= HEADER ================= -->
-    <div style="text-align:center; margin-bottom:25px;">
-        <img src="{% static 'images/school_logo.png' %}" style="height:70px;">
-        <h2>DODOMA SECONDARY SCHOOL</h2>
-
+    <div class="result-letterhead">
+        <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+        <h1>DODOMA SECONDARY SCHOOL</h1>
         {% if selected_exam %}
-            <h3 style="margin-top:10px;">
-                {{ selected_exam.name }} RESULTS
-            </h3>
-
-            <p>
-                {{ selected_class }} |
-                {{ selected_exam.academic_year.year }} |
-                {{ selected_exam.level }} Level
-            </p>
-
-            <!-- DOWNLOAD BUTTON -->
-            <a href="{% url 'download_class_pdf' selected_exam.id %}"
-               style="background:green; color:white; padding:8px 15px; text-decoration:none; margin-top:10px; display:inline-block;">
-                📄 Download Class PDF
-            </a>
+            <h2>{{ selected_exam.name }} — Class Results</h2>
+            <p>{{ selected_class }} &bull; {{ selected_exam.academic_year.year }} &bull; {{ selected_exam.level }}-Level</p>
+        {% else %}
+            <h2>Class Results</h2>
+            <p>Select an exam and class below to view results</p>
         {% endif %}
     </div>
 
-
-    <!-- ================= SELECT FORM ================= -->
-    <form method="GET" style="text-align:center; margin-bottom:20px;">
-
-        <select name="exam_id" required style="padding:8px; min-width:220px;">
-            <option value="">-- Select Exam --</option>
-            {% for exam in exams %}
-                <option value="{{ exam.id }}"
-                    {% if selected_exam and exam.id == selected_exam.id %}selected{% endif %}>
-                    {{ exam.name }} ({{ exam.level }})
-                </option>
-            {% endfor %}
-        </select>
-
-        <select name="class" required style="padding:8px; min-width:180px;">
-    <option value="">-- Select Class --</option>
-    
-    {% if classes %}
-        {% for c in classes %}
-            <option value="{{ c }}"
-                {% if selected_class and selected_class == c %}selected{% endif %}>
-                {{ c }}
-            </option>
-        {% endfor %}
-    {% else %}
-        <option disabled>No classes available</option>
-    {% endif %}
-</select>
-
-        <button type="submit"
-            style="padding:8px 20px; background:#2c3e50; color:white; border:none;">
-            Load Results
-        </button>
-    </form>
-
-
-    <!-- ================= RESULTS TABLE ================= -->
-    {% if students_data %}
-
-    <div style="overflow-x:auto;">
-
-        <table style="width:100%; border-collapse:collapse; text-align:center; font-size:14px;">
-
-            <thead style="background:black; color:white;">
-                <tr>
-                    <th>POS</th>
-                    <th style="text-align:left;">CANDIDATE NAME</th>
-                    <th>REG NO</th>
-
-                    {% for subject in subjects %}
-                        <th>{{ subject.code }}</th>
+    <div class="panel">
+        <form method="GET" class="filter-bar">
+            <label>Exam
+                <select name="exam_id" required>
+                    <option value="">-- Select Exam --</option>
+                    {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam and exam.id == selected_exam.id %}selected{% endif %}>
+                            {{ exam.name }} ({{ exam.level }})
+                        </option>
                     {% endfor %}
-
-                    <th>POINTS</th>
-                    <th>DIV</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for d in students_data %}
-                <tr style="border-bottom:1px solid #ddd;">
-
-                    <!-- POSITION -->
-                    <td><strong>{{ d.position }}</strong></td>
-
-                    <!-- NAME -->
-                    <td style="text-align:left;">
-                        <a href="{% url 'student_result_detail' selected_exam.id d.student.id %}">
-                            {{ d.student.first_name }} {{ d.student.last_name }}
-                        </a>
-                    </td>
-
-                    <!-- REG -->
-                    <td>{{ d.student.registration_number }}</td>
-
-                    <!-- SUBJECT GRADES -->
-                    {% for subject in subjects %}
-                    <td>
-                        {% with grade=d.grades|get_item:subject.id %}
-                            
-                            {% if grade == "ABS" %}
-                                <span style="color:red; font-weight:bold;">ABS</span>
-
-                            {% elif grade == "F" %}
-                                <span style="color:red; font-weight:bold;">F</span>
-
-                            {% elif grade %}
-                                {{ grade }}
-
-                            {% else %}
-                                -
-                            {% endif %}
-
-                        {% endwith %}
-                    </td>
-                    {% endfor %}
-
-                    <!-- POINTS -->
-                    <td><strong>{{ d.total_points }}</strong></td>
-
-                    <!-- DIVISION -->
-                    <td>
-                        <strong style="color:green;">
-                            {{ d.division }}
-                        </strong>
-                    </td>
-
-                </tr>
-                {% endfor %}
-            </tbody>
-
-        </table>
-
+                </select>
+            </label>
+            <label>Class
+                <select name="class" required>
+                    <option value="">-- Select Class --</option>
+                    {% if classes %}
+                        {% for c in classes %}
+                            <option value="{{ c }}" {% if selected_class and selected_class == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option disabled>No classes available</option>
+                    {% endif %}
+                </select>
+            </label>
+            <button type="submit" class="btn">Load Results</button>
+            {% if selected_exam %}
+                <a href="{% url 'download_class_pdf' selected_exam.id %}" class="btn success">📄 Download Class PDF</a>
+            {% endif %}
+        </form>
     </div>
 
-    {% else %}
-
-        <p style="text-align:center; color:#888; margin-top:30px;">
-            No results found.  
-            <br><br>
-            👉 Make sure:
-            <br>• Marks are submitted  
-            <br>• Results are generated  
-            <br>• Results are published  
-        </p>
-
+    {% if students_data %}
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table result-table">
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Candidate Name</th>
+                        <th>Reg No</th>
+                        {% for subject in subjects %}
+                            <th>{{ subject.code }}</th>
+                        {% endfor %}
+                        <th>Points</th>
+                        <th>Division</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in students_data %}
+                    <tr {% if d.position == 1 %}class="rank-1"{% endif %}>
+                        <td><strong>{{ d.position }}</strong></td>
+                        <td>
+                            <a href="{% url 'student_result_detail' selected_exam.id d.student.id %}">
+                                {{ d.student.first_name }} {{ d.student.last_name }}
+                            </a>
+                        </td>
+                        <td>{{ d.student.registration_number }}</td>
+                        {% for subject in subjects %}
+                        <td>
+                            {% with grade=d.grades|get_item:subject.id %}
+                                {% if grade and grade != "-" %}
+                                    <span class="grade-pill {{ grade|grade_css }}">{{ grade }}</span>
+                                {% else %}
+                                    <span style="color: var(--muted);">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td><strong>{{ d.total_points }}</strong></td>
+                        <td><span class="division-pill {{ d.division|division_css }}">{{ d.division }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% elif selected_exam %}
+        <div class="panel" style="text-align:center; color: var(--muted);">
+            <p><strong>No results found for {{ selected_class }}.</strong></p>
+            <p>Make sure marks are submitted, results are generated, and results are published for this exam.</p>
+        </div>
     {% endif %}
 
 </div>
-
 {% endblock %}
