@@ -1,0 +1,27 @@
+{% extends "library/base.html" %}
+{% block content %}
+<div class="page-shell" style="max-width:700px;">
+    <div class="page-header"><h1>➕ Add Book</h1></div>
+    <div class="panel">
+        <form method="post" class="form-grid">
+            {% csrf_token %}
+            <label>Title *<input type="text" name="title" required></label>
+            <label>Author<input type="text" name="author"></label>
+            <label>ISBN<input type="text" name="isbn"></label>
+            <label>Category
+                <select name="category">
+                    {% for value, label in category_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label>Publisher<input type="text" name="publisher"></label>
+            <label>Edition<input type="text" name="edition"></label>
+            <label>Shelf Location<input type="text" name="shelf_location"></label>
+            <label>Total Copies<input type="number" name="total_copies" min="1" value="1"></label>
+            <div style="grid-column:1/-1; margin-top:10px;">
+                <button type="submit" class="btn success">Save Book</button>
+                <a href="{% url 'library:book_list' %}" class="btn ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

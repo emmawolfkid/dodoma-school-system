@@ -11,6 +11,8 @@ def create_default_modules(sender, **kwargs):
         "discipline",
         "certificate",
         "audit",
+        "library",
+        "health",
     ]
 
     for module_name in modules:

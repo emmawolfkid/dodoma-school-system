@@ -1,0 +1,52 @@
+{% extends "library/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>📚 Library Dashboard</h1>
+        <p>Books, borrowing, and returns</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><strong>{{ total_books }}</strong><span>Book Titles</span></div>
+        <div class="stat-card"><strong>{{ total_copies }}</strong><span>Total Copies</span></div>
+        <div class="stat-card"><strong>{{ borrowed_count }}</strong><span>Currently Borrowed</span></div>
+        <div class="stat-card" style="border-left:4px solid var(--danger);"><strong style="color:var(--danger);">{{ overdue_count }}</strong><span>Overdue</span></div>
+    </div>
+
+    <div class="cards-grid">
+        <a href="{% url 'library:add_book' %}" class="btn">➕ Add Book</a>
+        <a href="{% url 'library:borrow_book' %}" class="btn success">📖 Issue Book</a>
+        <a href="{% url 'library:borrow_records' %}?status=overdue" class="btn danger">⚠️ View Overdue</a>
+    </div>
+
+    <div class="table-panel">
+        <h3 style="margin-top:0;">Recent Activity</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Book</th><th>Student</th><th>Borrowed</th><th>Due</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for r in recent_borrows %}
+                    <tr>
+                        <td>{{ r.book.title }}</td>
+                        <td>{{ r.student }}</td>
+                        <td>{{ r.borrowed_date }}</td>
+                        <td>{{ r.due_date }}</td>
+                        <td>
+                            {% if r.status == 'returned' %}
+                                <span class="badge success">Returned</span>
+                            {% elif r.is_overdue %}
+                                <span class="badge danger">Overdue</span>
+                            {% else %}
+                                <span class="badge info">Borrowed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center; color:var(--muted);">No activity yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "health/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>🩺 Health Dashboard</h1>
+        <p>Sick bay / nurse visit records</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><strong>{{ total_visits }}</strong><span>Total Visits Logged</span></div>
+        <div class="stat-card"><strong>{{ visits_today }}</strong><span>Visits Today</span></div>
+        <div class="stat-card"><strong>{{ referred_count }}</strong><span>Referred to Hospital</span></div>
+        <div class="stat-card" style="border-left:4px solid var(--warning);"><strong style="color:var(--warning);">{{ pending_followups }}</strong><span>Pending Follow-ups</span></div>
+    </div>
+
+    <div class="cards-grid">
+        <a href="{% url 'health:add_visit' %}" class="btn">➕ Record Visit</a>
+        <a href="{% url 'health:visit_list' %}" class="btn ghost">📋 All Visits</a>
+    </div>
+
+    <div class="table-panel">
+        <h3 style="margin-top:0;">Recent Visits</h3>
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Student</th><th>Reason</th><th>Date</th><th>Referred</th><th>Follow-up</th></tr></thead>
+                <tbody>
+                    {% for v in recent_visits %}
+                    <tr>
+                        <td>{{ v.student }}</td>
+                        <td>{{ v.reason }}</td>
+                        <td>{{ v.visit_date|date:"d M Y, H:i" }}</td>
+                        <td>{% if v.referred_to_hospital %}<span class="badge danger">Yes</span>{% else %}—{% endif %}</td>
+                        <td>{% if v.follow_up_required %}<span class="badge warning">{{ v.follow_up_date|default:"Yes" }}</span>{% else %}—{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center; color:var(--muted);">No visits recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

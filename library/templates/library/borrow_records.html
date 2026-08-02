@@ -1,0 +1,68 @@
+{% extends "library/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>📋 Borrow Records</h1>
+        <p>{{ page_obj.paginator.count }} record(s)</p>
+    </div>
+
+    <div class="panel">
+        <form method="get" class="filter-bar">
+            <label>Status
+                <select name="status">
+                    <option value="">All</option>
+                    <option value="borrowed" {% if status == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                    <option value="overdue" {% if status == 'overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="returned" {% if status == 'returned' %}selected{% endif %}>Returned</option>
+                </select>
+            </label>
+            <button type="submit" class="btn">Filter</button>
+        </form>
+    </div>
+
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Book</th><th>Student</th><th>Borrowed</th><th>Due</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for r in page_obj %}
+                    <tr>
+                        <td>{{ r.book.title }}</td>
+                        <td>{{ r.student }}</td>
+                        <td>{{ r.borrowed_date }}</td>
+                        <td>{{ r.due_date }}</td>
+                        <td>
+                            {% if r.status == 'returned' %}
+                                <span class="badge success">Returned {{ r.returned_date }}</span>
+                            {% elif r.is_overdue %}
+                                <span class="badge danger">Overdue</span>
+                            {% else %}
+                                <span class="badge info">Borrowed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.status == 'borrowed' %}
+                                <form method="post" action="{% url 'library:return_book' r.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn ghost" style="padding:6px 10px; font-size:0.78rem;">Mark Returned</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center; color:var(--muted);">No records found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&status={{ status }}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&status={{ status }}">Next</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

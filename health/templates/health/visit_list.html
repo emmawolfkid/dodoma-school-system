@@ -1,0 +1,47 @@
+{% extends "health/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>📋 All Health Visits</h1>
+        <p>{{ page_obj.paginator.count }} record(s)</p>
+    </div>
+
+    <div class="panel">
+        <form method="get" class="filter-bar">
+            <label>Search<input type="text" name="q" value="{{ query }}" placeholder="Student name, reg no, reason..."></label>
+            <button type="submit" class="btn">Search</button>
+            <a href="{% url 'health:add_visit' %}" class="btn success">➕ Record Visit</a>
+        </form>
+    </div>
+
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Student</th><th>Reason</th><th>Date</th><th>Treatment</th><th>Referred</th><th></th></tr></thead>
+                <tbody>
+                    {% for v in page_obj %}
+                    <tr>
+                        <td>{{ v.student }}</td>
+                        <td>{{ v.reason }}</td>
+                        <td>{{ v.visit_date|date:"d M Y, H:i" }}</td>
+                        <td>{{ v.treatment_given|default:"—"|truncatechars:40 }}</td>
+                        <td>{% if v.referred_to_hospital %}<span class="badge danger">Yes</span>{% else %}—{% endif %}</td>
+                        <td><a href="{% url 'health:student_history' v.student.id %}" class="btn ghost" style="padding:6px 10px; font-size:0.78rem;">History</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center; color:var(--muted);">No visits found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ query }}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ query }}">Next</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "library/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>📚 Books</h1>
+        <p>{{ page_obj.paginator.count }} title(s) in the library</p>
+    </div>
+
+    <div class="panel">
+        <form method="get" class="filter-bar">
+            <label>Search<input type="text" name="q" value="{{ query }}" placeholder="Title, author, ISBN..."></label>
+            <label>Category
+                <select name="category">
+                    <option value="">All</option>
+                    {% for value, label in category_choices %}
+                        <option value="{{ value }}" {% if category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit" class="btn">Filter</button>
+            <a href="{% url 'library:add_book' %}" class="btn success">➕ Add Book</a>
+        </form>
+    </div>
+
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Copies</th><th>Location</th><th></th></tr></thead>
+                <tbody>
+                    {% for book in page_obj %}
+                    <tr>
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.author|default:"—" }}</td>
+                        <td>{{ book.get_category_display }}</td>
+                        <td>
+                            {% if book.is_available %}
+                                <span class="badge success">{{ book.available_copies }}/{{ book.total_copies }} available</span>
+                            {% else %}
+                                <span class="badge danger">0/{{ book.total_copies }} available</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ book.shelf_location|default:"—" }}</td>
+                        <td><a href="{% url 'library:edit_book' book.id %}" class="btn ghost" style="padding:6px 10px; font-size:0.78rem;">Edit</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center; color:var(--muted);">No books found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&category={{ category }}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ query }}&category={{ category }}">Next</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

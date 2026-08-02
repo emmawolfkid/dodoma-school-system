@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Health{% endblock %} - Dodoma School System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/module_base.css' %}?v=1">
+</head>
+<body>
+
+<aside class="mod-sidebar" id="modSidebar">
+    <div class="mod-sidebar-brand">
+        <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+        <div>
+            <strong>Health</strong>
+            <span>School System</span>
+        </div>
+    </div>
+    <nav class="mod-sidebar-nav">
+        <a href="{% url 'health:health_dashboard' %}">Dashboard</a>
+        <a href="{% url 'health:visit_list' %}">All Visits</a>
+        <a href="{% url 'health:add_visit' %}">Record Visit</a>
+        <a href="{% url 'dashboard' %}">⬅ Back to Dashboard</a>
+    </nav>
+</aside>
+
+<main class="mod-main">
+    <div class="mod-topbar">
+        {% include 'partials/notification_bell.html' %}
+    </div>
+
+    {% if messages %}
+        <div class="messages-stack">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

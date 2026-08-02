@@ -1,0 +1,36 @@
+{% extends "health/base.html" %}
+{% block content %}
+<div class="page-shell" style="max-width:760px;">
+    <div class="page-header"><h1>➕ Record Health Visit</h1></div>
+    <div class="panel">
+        <form method="post" class="form-grid">
+            {% csrf_token %}
+            <label>Student *
+                <select name="student_id" required>
+                    <option value="">-- Select Student --</option>
+                    {% for s in students %}
+                        <option value="{{ s.id }}" {% if selected_student and selected_student.id == s.id %}selected{% endif %}>
+                            {{ s.first_name }} {{ s.last_name }} ({{ s.registration_number }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Reason for Visit *<input type="text" name="reason" required placeholder="e.g. Headache, Fever, Injury"></label>
+            <label style="grid-column:1/-1;">Symptoms<textarea name="symptoms" rows="2"></textarea></label>
+            <label style="grid-column:1/-1;">Treatment Given<textarea name="treatment_given" rows="2"></textarea></label>
+            <label style="display:flex; flex-direction:row; align-items:center; gap:8px;">
+                <input type="checkbox" name="referred_to_hospital" style="min-height:auto;"> Referred to Hospital
+            </label>
+            <label style="display:flex; flex-direction:row; align-items:center; gap:8px;">
+                <input type="checkbox" name="follow_up_required" style="min-height:auto;"> Follow-up Required
+            </label>
+            <label>Follow-up Date<input type="date" name="follow_up_date"></label>
+            <label style="grid-column:1/-1;">Notes<textarea name="notes" rows="2"></textarea></label>
+            <div style="grid-column:1/-1; margin-top:10px;">
+                <button type="submit" class="btn success">Save Visit</button>
+                <a href="{% url 'health:health_dashboard' %}" class="btn ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -78,6 +78,8 @@ INSTALLED_APPS = [
     'discipline',
     'certificate',
     'audit',
+    'library',
+    'health',
     'axes',
 ]
 

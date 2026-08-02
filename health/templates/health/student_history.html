@@ -1,0 +1,35 @@
+{% extends "health/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <div class="page-header">
+        <h1>🩺 Health History — {{ student.first_name }} {{ student.last_name }}</h1>
+        <p>{{ student.registration_number }} &bull; {{ student.student_class }}</p>
+    </div>
+
+    <div class="cards-grid">
+        <a href="{% url 'health:add_visit_for_student' student.id %}" class="btn">➕ Record New Visit</a>
+    </div>
+
+    <div class="table-panel">
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Reason</th><th>Symptoms</th><th>Treatment</th><th>Referred</th><th>Follow-up</th></tr></thead>
+                <tbody>
+                    {% for v in visits %}
+                    <tr>
+                        <td>{{ v.visit_date|date:"d M Y, H:i" }}</td>
+                        <td>{{ v.reason }}</td>
+                        <td>{{ v.symptoms|default:"—" }}</td>
+                        <td>{{ v.treatment_given|default:"—" }}</td>
+                        <td>{% if v.referred_to_hospital %}<span class="badge danger">Yes</span>{% else %}—{% endif %}</td>
+                        <td>{% if v.follow_up_required %}<span class="badge warning">{{ v.follow_up_date|default:"Yes" }}</span>{% else %}—{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center; color:var(--muted);">No health visits recorded for this student.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
