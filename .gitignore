@@ -11,6 +11,9 @@ venv/
 db.sqlite3
 *.log
 
+# Database backups (see core/management/commands/backup_database.py)
+backups/
+
 # Static files
 staticfiles/
 

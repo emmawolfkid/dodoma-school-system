@@ -185,9 +185,17 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Media files (User uploaded files)
+# Media files (User uploaded files -- student/staff photos, etc.)
+# ⚠️ PRODUCTION DEPLOYMENT: student and staff photos live on local disk by
+# default. On most hosts (containers, PaaS, VM redeploys) that disk is
+# ephemeral and gets wiped on redeploy/restart. Set DJANGO_MEDIA_ROOT to a
+# persistent, backed-up volume mount before going live (or swap this
+# FileSystemStorage for an object-storage backend like S3 once credentials
+# are available). Also note nothing serves /media/ at all when DEBUG=False
+# (see config/urls.py) -- a reverse proxy (nginx etc.) must serve this path
+# directly from MEDIA_ROOT in production.
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = Path(os.environ.get('DJANGO_MEDIA_ROOT', BASE_DIR / 'media'))
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
