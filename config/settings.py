@@ -11,8 +11,14 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
+
+# manage.py test / pytest shouldn't depend on collectstatic having been run
+# -- the manifest storage below 404s on any static file added since the
+# last collectstatic, which has nothing to do with whether the code works.
+RUNNING_TESTS = 'test' in sys.argv or 'pytest' in sys.modules
 
 ADMIN_SITE_HEADER = "Dodoma Secondary School Admin"
 ADMIN_SITE_TITLE = "Dodoma School System"
@@ -202,7 +208,11 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if RUNNING_TESTS else
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
     },
 }
 
