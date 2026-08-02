@@ -19,6 +19,7 @@ from .models import Student, Equipment, StudentClassHistory, PromotionBatch
 from .forms import StudentForm
 from .utils import has_permission
 from audit.services import log_action
+from academic.utils_notifications import create_notification, notify_module_admins
 
 
 CLASS_ORDER = ['Form 1', 'Form 2', 'Form 3', 'Form 4', 'Form 5', 'Form 6']
@@ -226,10 +227,22 @@ def reset_user_password(request, user_id):
         }
     )
 
+    # Email the temp password straight to the affected user when we can —
+    # safer than relying on the admin to relay it by word of mouth.
+    if user.email:
+        create_notification(
+            user,
+            f"Your password was reset by an admin. Temporary password: {temp_password}. "
+            f"You will be required to change it on your next login.",
+            email=True,
+            email_subject="Your password has been reset",
+        )
+
     messages.success(
         request,
         f"Password reset for {user.username}. Temporary password: {temp_password} "
         f"(they will be required to change it on next login)."
+        + (" An email with this password was also sent to them." if user.email else " They have no email on file — share this password with them directly.")
     )
 
     return redirect('manage_registration_users')
@@ -1274,6 +1287,13 @@ def promote_students(request):
                 'selected_classes': selected_classes,
                 'batch_id': str(batch.id),
             }
+        )
+
+        notify_module_admins(
+            'registration',
+            f"Promotion batch for {academic_year} complete: {moved} promoted, {graduated} graduated, {skipped} skipped.",
+            email=True,
+            email_subject="Promotion batch completed",
         )
 
         if skipped:

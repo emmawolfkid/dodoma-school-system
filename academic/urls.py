@@ -7,6 +7,8 @@ urlpatterns = [
     path('', views.academic_dashboard, name='academic_home'),  # This makes /academic/ work
     path('dashboard/', views.academic_dashboard, name='academic_dashboard'),
     path('notifications/read/', views.mark_notifications_read, name='mark_notifications_read'),
+    path('notifications/', views.all_notifications, name='all_notifications'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
 
     # TEACHER
     path('subjects/', views.teacher_subjects, name='teacher_subjects'),

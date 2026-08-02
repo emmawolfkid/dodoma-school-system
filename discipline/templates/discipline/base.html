@@ -112,9 +112,12 @@
             </span>
         </div>
 
-        <div class="user-info">
-            <i class="fas fa-user-circle"></i>
-            {{ request.user.username }}
+        <div style="display:flex; align-items:center; gap:14px;">
+            {% include 'partials/notification_bell.html' %}
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                {{ request.user.username }}
+            </div>
         </div>
 
     </div>

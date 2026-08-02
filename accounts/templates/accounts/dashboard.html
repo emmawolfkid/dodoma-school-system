@@ -38,7 +38,8 @@
             </div>
         </div>
 
-        <div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            {% include 'partials/notification_bell.html' %}
             <a href="{% url 'logout' %}" class="logout-btn">🚪 Logout</a>
         </div>
 

@@ -46,7 +46,10 @@
                     <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
                 </div>
             </div>
-            <a href="javascript:history.back()" class="btn ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+            <div style="display:flex; align-items:center; gap:12px;">
+                {% include 'partials/notification_bell.html' %}
+                <a href="javascript:history.back()" class="btn ghost btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+            </div>
         </header>
 
         {% if messages %}

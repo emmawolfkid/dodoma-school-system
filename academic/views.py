@@ -14,7 +14,7 @@ from accounts.models import User, UserModule
 from registration.models import Student
 from .models import TeacherSubject, Exam, StudentMark, Subject, AcademicYear, Result, Paper, TeacherSubjectRequest, Notification, Combination, MarkSubmission
 from .utils import calculate_student_result, rank_students, get_olevel_grade, get_alevel_grade
-from .utils_notifications import create_notification
+from .utils_notifications import create_notification, notify_many, notify_module_admins
 from .pdf_utils import generate_student_pdf, generate_class_pdf
 from audit.services import log_action  # ðŸ”¥ STEP 1 â€” IMPORT ADDED
 
@@ -209,6 +209,27 @@ def mark_notifications_read(request):
     ).update(is_read=True)
     messages.success(request, "Notifications marked as read.")
     return redirect(request.META.get('HTTP_REFERER') or 'academic_dashboard')
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    Notification.objects.filter(
+        id=notification_id,
+        user=request.user
+    ).update(is_read=True)
+    return redirect(request.META.get('HTTP_REFERER') or 'all_notifications')
+
+
+@login_required
+def all_notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+
+    paginator = Paginator(notifications, 25)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'academic/notifications.html', {
+        'page_obj': page_obj,
+    })
 
 # ===============================
 # TEACHER SUBJECT LIST
@@ -1034,6 +1055,32 @@ def publish_results(request, exam_id):
         changes={
             "event": "results_published"
         }
+    )
+
+    if exam.student_class == 'all':
+        relevant_classes = ACADEMIC_CLASSES
+    elif exam.student_class == 'all_olevel':
+        relevant_classes = ["Form 1", "Form 2", "Form 3", "Form 4"]
+    elif exam.student_class == 'all_alevel':
+        relevant_classes = ["Form 5", "Form 6"]
+    else:
+        relevant_classes = [exam.student_class]
+
+    assigned_teachers = User.objects.filter(
+        teachersubject__student_class__in=relevant_classes,
+        teachersubject__level=exam.level,
+        teachersubject__is_active=True
+    ).distinct()
+
+    notify_many(
+        assigned_teachers,
+        f"Results for '{exam.name}' have been published.",
+        email=True,
+        email_subject="Exam results published",
+    )
+    notify_module_admins(
+        'academic',
+        f"Results for '{exam.name}' have been published.",
     )
 
     messages.success(request, "Results published and exam locked")

@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
+from academic.utils_notifications import notify_module_admins
 
 
 # 🔹 HELPER
@@ -45,6 +46,12 @@ def signup_view(request):
                     user=user,
                     module=module,
                     is_approved=False
+                )
+                notify_module_admins(
+                    module.name,
+                    f"{user.username} has requested access to the {module.name} module and needs approval.",
+                    email=True,
+                    email_subject="New user pending approval",
                 )
 
             return redirect('login')

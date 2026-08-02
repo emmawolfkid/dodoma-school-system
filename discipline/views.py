@@ -11,6 +11,7 @@ from .decorators import discipline_permission_required
 from django.utils.timezone import now
 from registration.models import Student
 from audit.services import log_action  # ✅ Already present
+from academic.utils_notifications import notify_module_admins
 
 # ✅ OPTIONAL SAFE IMPORT (prevents crash if reportlab missing)
 try:
@@ -126,6 +127,15 @@ def add_case(request, student_id):
                     suspension.save()
 
                 student.update_school_status()
+
+            # Notify discipline admins outside the transaction — an email
+            # should never fire for a case that ends up rolled back.
+            notify_module_admins(
+                'discipline',
+                f"New {case.case_type} case logged for {student} ({case.get_action_type_display()}).",
+                email=(case.case_type == 'major' or action_taken == 'suspension'),
+                email_subject="New discipline case logged",
+            )
 
             messages.success(request, "Case added successfully.")
             return redirect('discipline:student_profile', student_id=student.id)

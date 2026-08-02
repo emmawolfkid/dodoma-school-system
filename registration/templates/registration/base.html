@@ -54,6 +54,9 @@
 
 <main class="main-wrapper">
     <div class="content-container">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+            {% include 'partials/notification_bell.html' %}
+        </div>
         {% if messages %}
             <div class="messages-container">
                 {% for message in messages %}

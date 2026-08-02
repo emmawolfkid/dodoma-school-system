@@ -202,7 +202,11 @@
             <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
             <span class="mobile-title">Audit Module</span>
         </div>
-        
+
+        <div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+            {% include 'partials/notification_bell.html' %}
+        </div>
+
         {% block content %}{% endblock %}
     </div>
 </div>

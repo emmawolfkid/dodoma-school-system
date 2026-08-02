@@ -12,6 +12,7 @@ from registration.models import Student, StudentClassHistory
 from academic.models import Result
 from discipline.models import DisciplineCase
 from .models import GraduateCollection
+from academic.utils_notifications import notify_module_admins
 
 # For PDF generation
 from reportlab.lib.pagesizes import A4, landscape
@@ -226,6 +227,8 @@ def update_necta_details(request, student_id):
     collection, created = GraduateCollection.objects.get_or_create(student=student)
 
     if request.method == 'POST':
+        was_received = collection.is_received_at_school
+
         collection.necta_certificate_no = request.POST.get('cert_no', '').strip() or None
         collection.necta_result_slip_no = request.POST.get('result_no', '').strip() or None
         collection.certificate_received_at_school = request.POST.get('cert_received') == 'on'
@@ -235,6 +238,15 @@ def update_necta_details(request, student_id):
         collection.result_slip_unavailable_reason = request.POST.get('result_unavailable_reason', '').strip()
         collection.notes = request.POST.get('notes', '').strip()
         collection.save()
+
+        if collection.is_received_at_school and not was_received:
+            notify_module_admins(
+                'certificate',
+                f"Certificate and result slip for {student.registration_number} ({student.first_name} {student.last_name}) have arrived at school and are ready for collection.",
+                email=True,
+                email_subject="Documents ready for collection",
+            )
+
         messages.success(request, f"NECTA details updated for {student.registration_number}")
         return redirect('certificate:graduates_list')
 

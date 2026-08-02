@@ -1,0 +1,27 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/notifications.css' %}?v=1">
+
+{% if request.user.is_authenticated %}
+<details class="gnotif-menu">
+    <summary>
+        🔔 Notifications
+        {% if notification_count > 0 %}<span class="gnotif-badge">{{ notification_count }}</span>{% endif %}
+    </summary>
+    <div class="gnotif-panel">
+        {% if notifications %}
+            {% for n in notifications %}
+                <div class="gnotif-item">
+                    <p>{{ n.message }}</p>
+                    <span>{{ n.created_at|date:"M d, H:i" }}</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <span class="gnotif-empty">No unread notifications.</span>
+        {% endif %}
+        <div class="gnotif-footer">
+            <a href="{% url 'mark_notifications_read' %}">Mark all read</a>
+            <a href="{% url 'all_notifications' %}">View all</a>
+        </div>
+    </div>
+</details>
+{% endif %}
