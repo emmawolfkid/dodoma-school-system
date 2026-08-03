@@ -80,6 +80,33 @@ Two things to get right before real students are enrolled with photos:
    must serve `/media/` directly from `MEDIA_ROOT`, or nothing will
    return uploaded photos at all.
 
+## 6. PDF digital signing (certificate collection receipts)
+
+```bash
+python manage.py generate_signing_cert
+```
+
+Writes a self-signed key/cert pair to `signing/` (gitignored — never
+commit it). Once present, `generate_collection_receipt` automatically
+signs every receipt it issues; documents generate normally (unsigned)
+if the cert hasn't been created yet, so this step is optional but
+recommended before go-live.
+
+**Important caveat**: this is a *self-signed* certificate. It proves a
+signed PDF wasn't altered afterward and records who/when it was
+signed, but Adobe Reader and similar tools will show it as
+"signature validity unknown" rather than a green checkmark, because
+no recognized Certificate Authority vouches for it. For a
+signature that verifies as trusted in Adobe Reader out of the box,
+replace `signing/school_signing.{key,cert}.pem` with a certificate
+issued by a recognized CA (or Tanzania's e-Government CA if
+available) — `core/pdf_signing.py` will use whatever is at those
+paths without any code changes.
+
+Back up `signing/school_signing.key.pem` somewhere safe outside the
+server — losing it means every future document has to switch to a new
+signing identity.
+
 If a persistent local volume isn't available (common on PaaS), switch
 to object storage (e.g. S3-compatible) via `django-storages` instead —
 that requires provider credentials this deployment guide can't supply

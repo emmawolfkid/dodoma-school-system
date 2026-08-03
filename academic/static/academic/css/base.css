@@ -517,6 +517,9 @@ pre {
    =============================== */
 
 .result-letterhead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   padding: 24px 22px 20px;
   margin-bottom: 18px;
@@ -528,8 +531,11 @@ pre {
 }
 
 .result-letterhead img {
-  height: 64px;
-  margin-bottom: 8px;
+  width: 100px;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 12px;
+  display: block;
 }
 
 .result-letterhead h1 {

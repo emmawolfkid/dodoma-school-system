@@ -14,6 +14,10 @@ db.sqlite3
 # Database backups (see core/management/commands/backup_database.py)
 backups/
 
+# PDF signing key/cert (see core/management/commands/generate_signing_cert.py)
+# -- private key material must never be committed.
+signing/
+
 # Static files
 staticfiles/
 

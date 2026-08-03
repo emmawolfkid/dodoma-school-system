@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import HttpResponse
 import os
+from io import BytesIO
 from django.utils import timezone
 
 from accounts.models import UserModule
@@ -13,6 +14,7 @@ from academic.models import Result
 from discipline.models import DisciplineCase
 from .models import GraduateCollection
 from academic.utils_notifications import notify_module_admins
+from core.pdf_signing import sign_pdf_bytes
 
 # For PDF generation
 from reportlab.lib.pagesizes import A4, landscape
@@ -288,11 +290,13 @@ def generate_collection_receipt(request, student_id):
 
     student = get_object_or_404(Student, id=student_id, school_status='Graduated')
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Collection_Receipt_{student.registration_number}.pdf"'
     collection = getattr(student, 'collection_record', None)
 
-    doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=2*cm, bottomMargin=2*cm)
+    # Built into a buffer first (not straight into the HTTP response) so it
+    # can be digitally signed before being sent -- signing needs to read
+    # back the complete PDF, which isn't possible once bytes are streamed out.
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=2*cm, bottomMargin=2*cm)
     elements = []
     styles = getSampleStyleSheet()
 
@@ -345,4 +349,13 @@ def generate_collection_receipt(request, student_id):
     elements.append(sig_table)
 
     doc.build(elements)
+
+    pdf_bytes = sign_pdf_bytes(
+        buffer.getvalue(),
+        reason='Official document collection receipt',
+        location='Dodoma Secondary School, Tanzania',
+    )
+
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Collection_Receipt_{student.registration_number}.pdf"'
     return response
