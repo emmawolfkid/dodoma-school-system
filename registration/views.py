@@ -351,10 +351,10 @@ def register_student(request):
                 }
             )
 
-            messages.success(request, "Ã¢Å“â€¦ Student registered successfully!")
+            messages.success(request, "Student registered successfully!")
             return redirect('view_students')
         else:
-            messages.error(request, "Ã¢ÂÅ’ Please fix the errors below.")
+            messages.error(request, "Please fix the errors below.")
     else:
         form = StudentForm()
 
@@ -410,10 +410,10 @@ def edit_student(request, student_id):
                 }
             )
             
-            messages.success(request, f"Ã¢Å“â€¦ Student {student.first_name} updated successfully!")
+            messages.success(request, f"Student {student.first_name} updated successfully!")
             return redirect('view_students')
         else:
-            messages.error(request, "Ã¢ÂÅ’ Please fix the errors below.")
+            messages.error(request, "Please fix the errors below.")
     else:
         form = StudentForm(instance=student)
     
@@ -511,7 +511,7 @@ def archive_student(request, student_id):
     # Use the helper method to archive with timestamp
     student.archive()
     
-    # Ã°Å¸â€Â¥ STEP 4 Ã¢â‚¬â€ ARCHIVE STUDENT LOG
+    # 🎯 STEP 4 — ARCHIVE STUDENT LOG
     log_action(
         user=request.user,
         action='update',
@@ -522,7 +522,7 @@ def archive_student(request, student_id):
         }
     )
     
-    messages.success(request, f"Ã°Å¸â€œÂ¦ Student {student.first_name} {student.last_name} archived successfully!")
+    messages.success(request, f"Student {student.first_name} {student.last_name} archived successfully!")
     return redirect('view_students')
 
 
@@ -542,7 +542,7 @@ def restore_student(request, student_id):
     student.restore()
     
     
-    # Ã°Å¸â€Â¥ STEP 5 Ã¢â‚¬â€ RESTORE STUDENT LOG
+    # 🎯 STEP 5 — RESTORE STUDENT LOG
     log_action(
         user=request.user,
         action='update',
@@ -553,7 +553,7 @@ def restore_student(request, student_id):
         }
     )
     
-    messages.success(request, f"Ã¢Å“â€¦ Student {student.first_name} {student.last_name} restored successfully!")
+    messages.success(request, f"Student {student.first_name} {student.last_name} restored successfully!")
     return redirect('view_students')
 
 @login_required

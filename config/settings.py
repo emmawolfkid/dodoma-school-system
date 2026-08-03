@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'audit',
     'library',
     'health',
+    'analytics',
     'axes',
 ]
 

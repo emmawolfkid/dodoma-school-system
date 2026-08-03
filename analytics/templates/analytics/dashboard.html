@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Dodoma School System</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/module_base.css' %}?v=1">
+    <style>
+        .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .bar-label { width: 130px; font-size: 0.85rem; font-weight: 700; color: #334155; flex-shrink: 0; }
+        .bar-track { flex: 1; background: #eef2f7; border-radius: 6px; overflow: hidden; height: 20px; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); border-radius: 6px; }
+        .bar-value { width: 40px; text-align: right; font-weight: 800; font-size: 0.85rem; color: #102849; }
+        .section-title { margin: 26px 0 12px; font-family: 'Poppins', sans-serif; color: #102849; font-size: 1.05rem; }
+        .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+    </style>
+</head>
+<body>
+
+<aside class="mod-sidebar" id="modSidebar">
+    <div class="mod-sidebar-brand">
+        <img src="{% static 'images/school_logo.png' %}" alt="School Logo">
+        <div><strong>Analytics</strong><span>School System</span></div>
+    </div>
+    <nav class="mod-sidebar-nav">
+        <a href="{% url 'analytics:analytics_dashboard' %}" class="active">Overview</a>
+        <a href="{% url 'dashboard' %}">⬅ Back to Dashboard</a>
+    </nav>
+</aside>
+
+<main class="mod-main">
+    <div class="mod-topbar">{% include 'partials/notification_bell.html' %}</div>
+
+    {% if messages %}
+        <div class="messages-stack">{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}</div>
+    {% endif %}
+
+    <div class="page-shell">
+        <div class="page-header">
+            <h1>📈 Analytics Overview</h1>
+            <p>A snapshot across enrollment, academic performance, discipline, library, and health</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><strong>{{ total_active }}</strong><span>Active Students</span></div>
+            <div class="stat-card"><strong>{{ exam_pass_rate|default:"—" }}{% if exam_pass_rate is not None %}%{% endif %}</strong><span>Pass Rate ({{ latest_exam.name|default:"No published exam yet" }})</span></div>
+            <div class="stat-card"><strong>{{ open_cases }}</strong><span>Open Discipline Cases</span></div>
+            <div class="stat-card"><strong>{{ borrowed_out }}</strong><span>Books Currently Borrowed</span></div>
+        </div>
+
+        <div class="two-col">
+            <div class="panel">
+                <div class="section-title" style="margin-top:0;">Enrollment by Class</div>
+                {% for c in class_counts %}
+                <div class="bar-row">
+                    <div class="bar-label">{{ c.student_class }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {% widthratio c.count max_class_count 100 %}%;"></div></div>
+                    <div class="bar-value">{{ c.count }}</div>
+                </div>
+                {% empty %}
+                <p style="color:var(--muted);">No active students yet.</p>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="section-title" style="margin-top:0;">
+                    Division Breakdown
+                    {% if latest_exam %}<span style="font-weight:400; color:var(--muted); font-size:0.85rem;"> — {{ latest_exam.name }}</span>{% endif %}
+                </div>
+                {% for d in division_breakdown %}
+                <div class="bar-row">
+                    <div class="bar-label">{{ d.division }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {% widthratio d.count max_division_count 100 %}%;"></div></div>
+                    <div class="bar-value">{{ d.count }}</div>
+                </div>
+                {% empty %}
+                <p style="color:var(--muted);">No published exam results yet.</p>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="section-title" style="margin-top:0;">Gender Distribution (Active Students)</div>
+                {% for g in gender_counts %}
+                <div class="bar-row">
+                    <div class="bar-label">{{ g.gender }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {% widthratio g.count total_active 100 %}%;"></div></div>
+                    <div class="bar-value">{{ g.count }}</div>
+                </div>
+                {% empty %}
+                <p style="color:var(--muted);">No active students yet.</p>
+                {% endfor %}
+            </div>
+
+            <div class="panel">
+                <div class="section-title" style="margin-top:0;">Discipline Cases by Type</div>
+                {% for t in case_type_counts %}
+                <div class="bar-row">
+                    <div class="bar-label">{{ t.case_type|capfirst }}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width: {% widthratio t.count open_cases|add:resolved_cases 100 %}%;"></div></div>
+                    <div class="bar-value">{{ t.count }}</div>
+                </div>
+                {% empty %}
+                <p style="color:var(--muted);">No discipline cases logged yet.</p>
+                {% endfor %}
+                <p style="margin: 10px 0 0; color: var(--muted); font-size: 0.82rem;">{{ open_cases }} open &bull; {{ resolved_cases }} resolved</p>
+            </div>
+        </div>
+
+        <div class="stats-grid" style="margin-top:24px;">
+            <div class="stat-card"><strong>{{ total_books }}</strong><span>Library Titles</span></div>
+            <div class="stat-card"><strong>{{ total_health_visits }}</strong><span>Health Visits Logged</span></div>
+            <div class="stat-card" style="border-left:4px solid var(--danger);"><strong style="color:var(--danger);">{{ referred_count }}</strong><span>Hospital Referrals</span></div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

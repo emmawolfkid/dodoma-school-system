@@ -840,11 +840,11 @@ def create_exam(request, exam_id=None):
         class_display = class_display_map.get(student_class, student_class)
 
         # ===============================
-        # âœ… SUCCESS MESSAGE
+        # SUCCESS MESSAGE
         # ===============================
         messages.success(
             request,
-            f"âœ… Exam '{name}' {action_msg} for {class_display}!"
+            f"Exam '{name}' {action_msg} for {class_display}!"
         )
 
         return redirect('exam_dashboard')
@@ -875,7 +875,7 @@ def delete_exam(request, exam_id):
     has_results = Result.objects.filter(exam=exam).exists()
 
     if has_results:
-        messages.error(request, "âŒ Cannot delete exam with results!")
+        messages.error(request, "Cannot delete exam with results!")
         return redirect('exam_dashboard')
     
     exam_name = exam.name  # Store before delete
@@ -1920,13 +1920,13 @@ def assign_subjects(request, user_id):
 
             create_notification(
                 user,
-                f"âœ… Assigned {subject.name} for {student_class}"
+                f"Assigned {subject.name} for {student_class}"
             )
 
         if assigned_count > 0:
-            messages.success(request, f"âœ… {assigned_count} subject(s) assigned!")
+            messages.success(request, f"{assigned_count} subject(s) assigned successfully.")
         if skipped_count > 0:
-            messages.warning(request, f"âš ï¸ {skipped_count} skipped (already assigned or wrong level).")
+            messages.warning(request, f"{skipped_count} skipped (already assigned or wrong level).")
 
         return redirect('assign_subjects', user_id=user_id)
 
@@ -2029,9 +2029,9 @@ def select_subjects(request):
             created_count += 1
 
         if created_count > 0:
-            messages.success(request, f"âœ… {created_count} request(s) sent!")
+            messages.success(request, f"{created_count} request(s) sent successfully.")
         if skipped_count > 0:
-            messages.info(request, f"â„¹ï¸ {skipped_count} skipped.")
+            messages.info(request, f"{skipped_count} skipped.")
 
         return redirect('select_subjects')
 
